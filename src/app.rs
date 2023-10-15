@@ -1,3 +1,5 @@
+use screenshots::Screen;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -5,9 +7,9 @@
 pub struct QuickCaptureApp {
     // Example stuff:
     label: String,
+
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
-    button_spacing: f32
 }
 
 impl Default for QuickCaptureApp {
@@ -16,7 +18,6 @@ impl Default for QuickCaptureApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
-            button_spacing: 4.0,
         }
     }
 }
@@ -83,22 +84,36 @@ impl eframe::App for QuickCaptureApp {
             ui.separator();
 
             ui.horizontal(|ui| {
+                if ui.small_button("📷 Screenshot").clicked() {
+                    println!("Screenshot button pressed");
+
+                    let screens = Screen::all().unwrap();
+
+                    for screen in screens {
+                        let image = screen.capture().unwrap();
+                        image
+                            .save(format!("target/{}.png", screen.display_info.id))
+                            .unwrap();
+                    }
+                }
+
+                ui.add_space(4.0);
+
                 if ui.small_button("💾 Save").clicked() {
                     println!("Save button pressed")
                 }
 
-                ui.add_space(self.button_spacing);
+                ui.add_space(4.0);
 
                 if ui.small_button("↖ Arrow").hovered() {
                     println!("Hovering on arrow button")
                 }
 
-                ui.add_space(self.button_spacing);
+                ui.add_space(4.0);
 
                 if ui.small_button("| Line").clicked() {
                     println!("Pressed line button")
                 }
-
             });
 
             ui.add(egui::github_link_file!(
