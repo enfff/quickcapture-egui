@@ -19,6 +19,9 @@ eframe = { version = "0.23.0", default-features = false, features = [
 ] }
 log = "0.4"
 
+# As explained in https://docs.rs/egui/latest/egui/load/index.html
+egui_extras = { version = "0.23.0", features = ["all_loaders"] }
+
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 

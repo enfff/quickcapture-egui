@@ -48,6 +48,9 @@ impl eframe::App for QuickCaptureApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
+        
+        // As explained in https://docs.rs/egui/latest/egui/load/index.html
+        egui_extras::install_image_loaders(ctx);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -95,6 +98,11 @@ impl eframe::App for QuickCaptureApp {
                             .save(format!("target/{}.png", screen.display_info.id))
                             .unwrap();
                     }
+
+                    // TODO Rendere il percorso valido per tutti i sistemi operativi
+                    // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
+
+
                 }
 
                 ui.add_space(4.0);
@@ -116,6 +124,18 @@ impl eframe::App for QuickCaptureApp {
                 }
             });
 
+
+            // LOAD IMAGES
+
+            // Add egui_extras as a dependency with the all_loaders feature.
+            // Add a call to egui_extras::install_image_loaders in your app’s setup code.
+            // Use Ui::image with some ImageSource.
+            // https://docs.rs/egui/latest/egui/load/index.html
+
+            ui.add(
+                egui::Image::new(egui::include_image!("../target/33.png"))
+                    .rounding(5.0)
+            );
             
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
@@ -125,6 +145,9 @@ impl eframe::App for QuickCaptureApp {
                     "Source code"
                 ));
             });
+
+            
+
         });
     }
 }
