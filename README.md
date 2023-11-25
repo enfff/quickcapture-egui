@@ -16,3 +16,9 @@ A multi platform screenshot utility written in Rust
 Make sure you are using the latest version of stable rust by running `rustup update`.
 
 `cargo run --release`
+
+
+## Docs
+
+- [Context](https://docs.rs/egui/latest/egui/struct.Context.html)
+- [Ui](https://docs.rs/egui/latest/egui/struct.Ui.html)

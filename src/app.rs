@@ -1,23 +1,42 @@
-use screenshots::Screen;
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+// #[derive(serde::Deserialize, serde::Serialize)]
+// #[serde(default)] // if we add new fields, give them default values when deserializing old state
+
+use crate::components::initial_window::initial_window;
+use crate::components::hidden_window::hidden_window;
+
+use crate::app::Status::*;
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Status{
+    InitialWindow,          // Initial state, empty window
+    HiddenWindow,                 // Hide all windows
+    // ScreenshotWindow,             // Screenshot taken
+}
+
+// impl Default for Status{
+//     fn default() -> Self {
+//         InitialWindow
+//     }
+// }
 
 pub struct QuickCaptureApp {
     // Example stuff:
-    label: String,
+    // label: String,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    // #[serde(skip)] // This how you opt-out of serialization of a field
+
+    // value: f32,
+    status: Status,
 }
 
 impl Default for QuickCaptureApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            // label: "Hello World!".to_owned(),
+            // value: 2.7,
+            status: InitialWindow,
         }
     }
 }
@@ -30,126 +49,39 @@ impl QuickCaptureApp {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
+        // if let Some(storage) = cc.storage {
+        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        // }
 
         Default::default()
+    }
+
+    pub fn set_status(&mut self, status: Status){
+        self.status = status;
     }
 }
 
 impl eframe::App for QuickCaptureApp {
     /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
+    // fn save(&mut self, storage: &mut dyn eframe::Storage) {
+    //     eframe::set_value(storage, eframe::APP_KEY, self);
+    // }
+    
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-        
-        // As explained in https://docs.rs/egui/latest/egui/load/index.html
+
         egui_extras::install_image_loaders(ctx);
 
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-                {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            _frame.close();
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
-            });
-        });
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            // ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            // if ui.button("Increment").clicked() {
-            //     self.value += 1.0;
-            // }
-
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                if ui.small_button("📷 Screenshot").clicked() {
-                    println!("Screenshot button pressed");
-
-                    let screens = Screen::all().unwrap();
-
-                    for screen in screens {
-                        let image = screen.capture().unwrap();
-                        image
-                            .save(format!("target/{}.png", screen.display_info.id))
-                            .unwrap();
-                    }
-
-                    // TODO Rendere il percorso valido per tutti i sistemi operativi
-                    // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
-
-
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("💾 Save").clicked() {
-                    println!("Save button pressed")
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("↖ Arrow").hovered() {
-                    println!("Hovering on arrow button")
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("| Line").clicked() {
-                    println!("Pressed line button")
-                }
-            });
-
-
-            // LOAD IMAGES
-
-            // Add egui_extras as a dependency with the all_loaders feature.
-            // Add a call to egui_extras::install_image_loaders in your app’s setup code.
-            // Use Ui::image with some ImageSource.
-            // https://docs.rs/egui/latest/egui/load/index.html
-
-            ui.add(
-                egui::Image::new(egui::include_image!("../target/33.png"))
-                    .rounding(5.0)
-            );
-            
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                // powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-                ui.add(egui::github_link_file!(
-                    "https://github.com/enfff/quickcapture-egui/blob/master/",
-                    "Source code"
-                ));
-            });
-
-            
-
-        });
-    }
+        match self.status {
+            InitialWindow => {
+                initial_window(self, ctx, _frame);
+            }
+            HiddenWindow => {
+                hidden_window(self, ctx, _frame);
+            }
+        }
+    }    
 }
 
 // fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
