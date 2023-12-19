@@ -12,7 +12,7 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
     eframe::run_native(
-        "eframe template",
+        "QuickCapture",
         native_options,
         Box::new(|cc| Box::new(quickcapture::QuickCaptureApp::new(cc))),
     )

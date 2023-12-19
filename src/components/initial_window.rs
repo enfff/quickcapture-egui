@@ -3,11 +3,17 @@ use eframe::egui;
 
 use crate::app::Status;
 use crate::app::QuickCaptureApp;
-
+// use std::time::{Duration, SystemTime};
+// use std::thread::sleep;
 use screenshots::Screen;
 
 
 pub fn initial_window(app: &mut QuickCaptureApp, ctx: &egui::Context, _frame: &mut eframe::Frame){
+
+    if ctx.input(|i| i.key_pressed(egui::Key::S)) {
+        println!("Pressed S");
+    }
+
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
 
         egui::menu::bar(ui, |ui| {
@@ -26,35 +32,24 @@ pub fn initial_window(app: &mut QuickCaptureApp, ctx: &egui::Context, _frame: &m
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
-        // The central panel the region left after adding TopPanel's and SidePanel's
-        // ui.heading("eframe template");
-
-        // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-        // if ui.button("Increment").clicked() {
-        //     self.value += 1.0;
-        // }
-
-        // ui.separator();
-
         ui.horizontal(|ui| {
             if ui.small_button("📷 Screenshot").clicked() {
                 println!("Screenshot button pressed");
-
+                
                 _frame.set_minimized(true); // Hides window
-
+                println!("Minimized");
+                // app.set_status(Status::HiddenWindow);
+                
                 let screens = Screen::all().unwrap();
-
+                
                 for screen in screens {
                     let image = screen.capture().unwrap();
                     image
-                        .save("./target/33.png")
-                        .unwrap();
+                    .save("./target/picture.png")
+                    .unwrap();
+                    // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
+                    // TODO Rendere il percorso valido per tutti i sistemi operativi
                 }
-
-                // TODO Rendere il percorso valido per tutti i sistemi operativi
-                // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
-
-                _frame.set_minimized(false); // Shows window
             }
 
             if ui.small_button("Switch to Hidden Window").clicked() {

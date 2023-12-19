@@ -82,6 +82,7 @@ impl eframe::App for QuickCaptureApp {
             }
         }
     }    
+
 }
 
 // fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
