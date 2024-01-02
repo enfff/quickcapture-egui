@@ -1,5 +1,5 @@
 use std::sync::mpsc;
-use std::thread;
+use std::{thread, time};
 use image::{RgbaImage, ImageBuffer};
 
 mod screenshot_utils;
@@ -26,7 +26,6 @@ pub struct QuickCaptureApp {
     texture: Option<egui::TextureHandle>,   // Used to display the screenshot
     screenshot_image_buffer: Option<RgbaImage>,
     screenshot_type: Option<ScreenshotType>,
-    times_called: u8,
 }
 
 impl Default for QuickCaptureApp {
@@ -43,7 +42,6 @@ impl Default for QuickCaptureApp {
             screenshot_type: None,
             screenshot_image_buffer: None,
             is_app_saving: false,
-            times_called: 0,
         }
     }
 }
@@ -151,6 +149,31 @@ impl QuickCaptureApp {
     pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         println!("screenshot_view");
 
+        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
+
+        if self.screenshot_type.is_some() {
+            // It's not the screenshot, but the data describing it. It needs to be converted to an image.
+
+            // quick and dirty solution, i wasted TOO much time on this
+            thread::sleep(time::Duration::from_millis(150));
+
+            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
+            let tmp_screenshot_type = self.screenshot_type.clone();
+
+            // Take the screenshot and wait until it's done
+            thread::spawn(move || {
+                let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
+                tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
+            });
+
+            
+            self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
+            
+            // save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
+            self.view = Views::Home;
+            self.screenshot_type = None;
+        }
+
         let width = _frame.info().window_info.monitor_size.unwrap().x;
         let height = _frame.info().window_info.monitor_size.unwrap().y;
 
@@ -161,9 +184,10 @@ impl QuickCaptureApp {
         // Siccome noi vogliamo che lo per chiamata di "screenshot_view", si fa un controllo con un contatore
 
         if self.screenshot_type.is_none() {
+            _frame.set_visible(true);
             println!("Screenshot type is none");
 
-            let tmp: Option<egui::InnerResponse<Option<()>>> = egui::Window::new("screenshot_view")
+            egui::Window::new("screenshot_view")
                 .title_bar(false)
                 .fixed_pos(egui::pos2(0.0, 0.0))
                 .show(ctx, |ui| {
@@ -193,39 +217,15 @@ impl QuickCaptureApp {
                             if self.screenshot_type.is_some() {
                                 // L'utente ha scelto che screenshot da fare
                                 println!("scrernshot_type is some");
-                                ui.set_visible(false);
                                 _frame.set_visible(false);
-                                ctx.request_repaint();
-                                
+                                ui.set_visible(false);
+                                ctx.request_repaint();   
                             }
 
                             // TODO scommenta
                         });
                     });
                 });
-        }
-        
-
-        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
-    
-        if self.screenshot_type.is_some() {
-            // It's not the screenshot, but the data describing it. It needs to be converted to an image.
-
-            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
-            let tmp_screenshot_type = self.screenshot_type.clone();
-
-            // Take the screenshot and wait until it's done
-            thread::spawn(move || {
-                let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
-                tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
-            });
-            
-            self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
-            
-            // save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
-            self.view = Views::Home;
-            self.screenshot_type = None;
-            self.times_called = 0;
         }
 
 
