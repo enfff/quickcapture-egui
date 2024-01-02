@@ -1,57 +1,63 @@
-use screenshots::Screen;
+use std::sync::mpsc;
+use std::thread;
+use image::{RgbaImage, ImageBuffer};
 
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+mod screenshot_utils;
+mod save_utils;
+
+pub enum Views {
+    Home,
+    Settings,
+    Capture,
+}
+
+#[derive(Clone)]
+pub enum ScreenshotType {
+    FullScreen,
+    PartialScreen,
+}
 
 pub struct QuickCaptureApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    pub view: Views,
+    // Used by the tokio runtime
+    pub tx: mpsc::Sender<std::time::Duration>,
+    pub rx: mpsc::Receiver<std::time::Duration>,
+    pub is_app_saving: bool,
+    texture: Option<egui::TextureHandle>,   // Used to display the screenshot
+    screenshot_image_buffer: Option<RgbaImage>,
+    screenshot_type: Option<ScreenshotType>,
+    times_called: u8,
 }
 
 impl Default for QuickCaptureApp {
     fn default() -> Self {
+
+        let (tx, rx) = std::sync::mpsc::channel::<std::time::Duration>();
+
+        // Default options
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            view: Views::Home,
+            tx,
+            rx,
+            texture: None,
+            screenshot_type: None,
+            screenshot_image_buffer: None,
+            is_app_saving: false,
+            times_called: 0,
         }
     }
 }
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 impl QuickCaptureApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
-
         Default::default()
     }
-}
 
-impl eframe::App for QuickCaptureApp {
-    /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    /// Called each time the UI needs repainting, which may be many times per second.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-        
-        // As explained in https://docs.rs/egui/latest/egui/load/index.html
-        egui_extras::install_image_loaders(ctx);
-
+    // Views (the current view)
+    pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -72,44 +78,33 @@ impl eframe::App for QuickCaptureApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            // ui.heading("eframe template");
+            ui.heading("eframe template");
 
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            // if ui.button("Increment").clicked() {
-            //     self.value += 1.0;
-            // }
-
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                if ui.small_button("📷 Screenshot").clicked() {
+                if ui.small_button("📷 Take Screenshot").clicked() {
                     println!("Screenshot button pressed");
-
-                    let screens = Screen::all().unwrap();
-
-                    for screen in screens {
-                        let image = screen.capture().unwrap();
-                        image
-                            .save(format!("target/{}.png", screen.display_info.id))
-                            .unwrap();
-                    }
-
-                    // TODO Rendere il percorso valido per tutti i sistemi operativi
-                    // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
-
-
+                    self.view = Views::Capture;
                 }
 
                 ui.add_space(4.0);
 
-                if ui.small_button("💾 Save").clicked() {
-                    println!("Save button pressed")
+                if ui.small_button("Settings").clicked() {
+                    println!("Settings button pressed");
+                    self.view = Views::Settings;
                 }
+
+                
+                if self.screenshot_image_buffer.is_some(){
+                    ui.add_space(4.0);
+
+                    if ui.small_button("💾 Save").clicked() {
+                        println!("Save button pressed");
+                        if self.screenshot_image_buffer.is_some() {
+                            save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
+                        }
+                    }
+                }
+
 
                 ui.add_space(4.0);
 
@@ -124,19 +119,11 @@ impl eframe::App for QuickCaptureApp {
                 }
             });
 
+            if self.screenshot_image_buffer.is_some(){
+                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer 
+                ui.label("a screnshot has been taken");
+            }
 
-            // LOAD IMAGES
-
-            // Add egui_extras as a dependency with the all_loaders feature.
-            // Add a call to egui_extras::install_image_loaders in your app’s setup code.
-            // Use Ui::image with some ImageSource.
-            // https://docs.rs/egui/latest/egui/load/index.html
-
-            ui.add(
-                egui::Image::new(egui::include_image!("../target/33.png"))
-                    .rounding(5.0)
-            );
-            
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
@@ -145,23 +132,102 @@ impl eframe::App for QuickCaptureApp {
                     "Source code"
                 ));
             });
+        });
 
-            
+        
 
+    }
+
+    pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            println!("settings_view");
+            ui.label("Settings view");
+            if ui.button("go back").clicked(){
+                self.view = Views::Home;
+            };
         });
     }
-}
+    
+    pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        println!("screenshot_view");
 
-// fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-//     ui.horizontal(|ui| {
-//         ui.spacing_mut().item_spacing.x = 0.0;
-//         ui.label("Powered by ");
-//         ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-//         ui.label(" and ");
-//         ui.hyperlink_to(
-//             "eframe",
-//             "https://github.com/emilk/egui/tree/master/crates/eframe",
-//         );
-//         ui.label(".");
-//     });
-// }
+        let width = _frame.info().window_info.monitor_size.unwrap().x;
+        let height = _frame.info().window_info.monitor_size.unwrap().y;
+
+        // Mostra UI per generare screenshot
+
+        // Se l'utente non ha scelto che tipo di screenshot fare (tra FullScreen e PartialScreen)
+        // Questa funzione viene chiamata ad ogni update() che può avvenire più volte in un secondo.
+        // Siccome noi vogliamo che lo per chiamata di "screenshot_view", si fa un controllo con un contatore
+
+        if self.screenshot_type.is_none() {
+            println!("Screenshot type is none");
+
+            let tmp: Option<egui::InnerResponse<Option<()>>> = egui::Window::new("screenshot_view")
+                .title_bar(false)
+                .fixed_pos(egui::pos2(0.0, 0.0))
+                .show(ctx, |ui| {
+                    // self.id = Some(ui.layer_id());
+                    ui.horizontal(|ui| {
+                        ui.horizontal(|ui| {
+                            
+                            if ui.button("⛶").clicked() {
+                                self.screenshot_type = Some(ScreenshotType::PartialScreen);
+                                println!("PartialScreen button pressed");
+                            }
+
+                            ui.separator();
+
+                            if ui.button("🖵").clicked() {
+                                self.screenshot_type = Some(ScreenshotType::FullScreen);
+                                println!("Fullscreen button pressed");
+                            }
+
+                            ui.separator();
+
+                            if ui.button("◀").clicked() {
+                                // restore_dim(&None, _frame, Some(Views::Home));
+                                self.view = Views::Home;
+                            }
+
+                            if self.screenshot_type.is_some() {
+                                // L'utente ha scelto che screenshot da fare
+                                println!("scrernshot_type is some");
+                                ui.set_visible(false);
+                                _frame.set_visible(false);
+                                ctx.request_repaint();
+                                
+                            }
+
+                            // TODO scommenta
+                        });
+                    });
+                });
+        }
+        
+
+        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
+    
+        if self.screenshot_type.is_some() {
+            // It's not the screenshot, but the data describing it. It needs to be converted to an image.
+
+            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
+            let tmp_screenshot_type = self.screenshot_type.clone();
+
+            // Take the screenshot and wait until it's done
+            thread::spawn(move || {
+                let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
+                tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
+            });
+            
+            self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
+            
+            // save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
+            self.view = Views::Home;
+            self.screenshot_type = None;
+            self.times_called = 0;
+        }
+
+
+    }
+}
