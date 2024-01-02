@@ -1,9 +1,7 @@
 // use std::io::Cursor;
 // use std::sync::mpsc::Sender;
 
-use image::{GenericImage, ImageBuffer};
 use screenshots::Screen;
-use std::sync::mpsc::Sender;
 
 use crate::app::ScreenshotType;
 

@@ -76,23 +76,17 @@ impl QuickCaptureApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
 
             ui.horizontal(|ui| {
                 if ui.small_button("📷 Take Screenshot").clicked() {
                     println!("Screenshot button pressed");
                     self.view = Views::Capture;
                 }
-
                 ui.add_space(4.0);
 
-                if ui.small_button("Settings").clicked() {
-                    println!("Settings button pressed");
-                    self.view = Views::Settings;
-                }
 
-                
                 if self.screenshot_image_buffer.is_some(){
+                    // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
                     ui.add_space(4.0);
 
                     if ui.small_button("💾 Save").clicked() {
@@ -101,25 +95,31 @@ impl QuickCaptureApp {
                             save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
                         }
                     }
-                }
+                    ui.add_space(4.0);
+    
+                    if ui.small_button("↖ Arrow").clicked() {
+                        println!("Clicked arrow button")
+                    }
+                    ui.add_space(4.0);
+                    
+                    if ui.small_button("| Line").clicked() {
+                        println!("Clicked line button")
+                    }
+                    ui.add_space(4.0);
 
+                }
 
                 ui.add_space(4.0);
 
-                if ui.small_button("↖ Arrow").hovered() {
-                    println!("Hovering on arrow button")
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("| Line").clicked() {
-                    println!("Pressed line button")
+                if ui.small_button("Settings").clicked() {
+                    println!("Settings button pressed");
+                    self.view = Views::Settings;
                 }
             });
 
             if self.screenshot_image_buffer.is_some(){
                 // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer 
-                ui.label("a screnshot has been taken");
+                ui.label("a screenshot has been taken");
             }
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
