@@ -127,13 +127,11 @@ impl QuickCaptureApp {
                         Default::default(),
                     ));
 
-                    ui.image(&self.texture.clone().unwrap());
+                    // ui.image(&self.texture.clone().unwrap());
 
-                    // let texture = frame
-                    // .tex_allocator()
-                    // .alloc_srgba_premultiplied(size, &pixels);
-                    // let size = egui::Vec2::new(size.0 as f32, size.1 as f32);
-                    // self.texture = Some((size, texture));
+                    ui.add(
+                        egui::Image::new(&self.texture.clone().unwrap()).max_width(ctx.used_size()[0])
+                    );
                 });
 
 
