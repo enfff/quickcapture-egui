@@ -4,6 +4,7 @@ use image::{RgbaImage, ImageBuffer};
 
 mod screenshot_utils;
 mod save_utils;
+mod image_utils;
 
 pub enum Views {
     Home,
@@ -77,49 +78,67 @@ impl QuickCaptureApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
+
             ui.horizontal(|ui| {
                 if ui.small_button("📷 Take Screenshot").clicked() {
                     println!("Screenshot button pressed");
                     self.view = Views::Capture;
                 }
-                ui.add_space(4.0);
-
-
+                
+                
                 if self.screenshot_image_buffer.is_some(){
                     // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
-                    ui.add_space(4.0);
-
+                    
+                    ui.separator();
                     if ui.small_button("💾 Save").clicked() {
                         println!("Save button pressed");
                         if self.screenshot_image_buffer.is_some() {
                             save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
                         }
                     }
-                    ui.add_space(4.0);
-    
+                    
+                    ui.separator();
                     if ui.small_button("↖ Arrow").clicked() {
                         println!("Clicked arrow button")
                     }
-                    ui.add_space(4.0);
                     
+                    ui.separator();
                     if ui.small_button("| Line").clicked() {
                         println!("Clicked line button")
                     }
-                    ui.add_space(4.0);
 
                 }
 
-                ui.add_space(4.0);
-
+                ui.separator();
                 if ui.small_button("Settings").clicked() {
                     println!("Settings button pressed");
                     self.view = Views::Settings;
                 }
             });
 
+            // Se c'è un'immagine nel buffer, mostrala nella main window
             if self.screenshot_image_buffer.is_some(){
                 // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer 
-                ui.label("a screenshot has been taken");
+                ui.centered_and_justified(|ui| {
+                    // Shouldn't be calling this here, read docs!
+                    self.texture = Some(ui.ctx().load_texture(
+                        "current_screenshot",
+                        image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                        Default::default(),
+                    ));
+
+                    ui.image(&self.texture.clone().unwrap());
+
+                    // let texture = frame
+                    // .tex_allocator()
+                    // .alloc_srgba_premultiplied(size, &pixels);
+                    // let size = egui::Vec2::new(size.0 as f32, size.1 as f32);
+                    // self.texture = Some((size, texture));
+                });
+
+
+                // ui.centered_and_justified(add_contents)
+
             }
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -154,7 +173,7 @@ impl QuickCaptureApp {
         if self.screenshot_type.is_some() {
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
-            // quick and dirty solution, i wasted TOO much time on this
+            // quick and dirty solution, i wasted TOO much time on this...
             thread::sleep(time::Duration::from_millis(150));
 
             let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
@@ -199,14 +218,12 @@ impl QuickCaptureApp {
                                 self.screenshot_type = Some(ScreenshotType::PartialScreen);
                                 println!("PartialScreen button pressed");
                             }
-
                             ui.separator();
 
                             if ui.button("🖵").clicked() {
                                 self.screenshot_type = Some(ScreenshotType::FullScreen);
                                 println!("Fullscreen button pressed");
                             }
-
                             ui.separator();
 
                             if ui.button("◀").clicked() {
@@ -217,6 +234,8 @@ impl QuickCaptureApp {
                             if self.screenshot_type.is_some() {
                                 // L'utente ha scelto che screenshot da fare
                                 println!("scrernshot_type is some");
+                                
+                                // Hides the screen
                                 _frame.set_visible(false);
                                 ui.set_visible(false);
                                 ctx.request_repaint();   

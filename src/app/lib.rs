@@ -7,3 +7,4 @@ pub use app::QuickCaptureApp;
 
 mod screenshot_utils;
 mod save_utils;
+mod image_utils;

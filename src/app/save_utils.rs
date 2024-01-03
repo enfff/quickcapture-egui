@@ -8,12 +8,10 @@ pub fn save_image(screenshot_image_buffer: ImageBuffer<image::Rgba<u8>, Vec<u8>>
 
     tokio::spawn(async move {
         image::save_buffer(path2,  &screenshot_image_buffer.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8).unwrap();
-        // image::save_buffer(path,  &screenshot_image_buffer.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8);
+        // image::save_buffer(path,  &screenshot_image_buffer.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8); // for quick testing
     });
 
     let duration = instant.elapsed();
     println!("save_image time elapsed: {:?}", duration);
     tx.send(duration).unwrap();
-    // ctx.request_repaint();
-
 }
