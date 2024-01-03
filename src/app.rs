@@ -116,9 +116,12 @@ impl QuickCaptureApp {
                 }
             });
 
-            // Se c'è un'immagine nel buffer, mostrala nella main window
-            if self.screenshot_image_buffer.is_some(){
-                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer 
+            if self.screenshot_image_buffer.is_none(){
+                // Ancora non è stato fatto alcuno screenshot
+                ui.centered_and_justified(|ui| ui.label("Take a screenshot"));
+
+            } else {
+                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo
                 ui.centered_and_justified(|ui| {
                     // Shouldn't be calling this here, read docs!
                     self.texture = Some(ui.ctx().load_texture(
@@ -127,17 +130,24 @@ impl QuickCaptureApp {
                         Default::default(),
                     ));
 
+                    // Older alternative
                     // ui.image(&self.texture.clone().unwrap());
 
+                    // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
+                    // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
                     ui.add(
                         egui::Image::new(&self.texture.clone().unwrap()).max_width(ctx.used_size()[0])
                     );
+                    
+                    // Infatti se printi questo
+                    // println!("ctx_used_size {:?}", ctx.used_size());
+                    // Esce sempre [xxx, 24.0]
                 });
 
-
                 // ui.centered_and_justified(add_contents)
-
             }
+
+            
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
