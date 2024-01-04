@@ -26,6 +26,7 @@ fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
         initial_window_size: Some([600.0, 440.0].into()),
         min_window_size: Some([600.0, 440.0].into()),
+        transparent: true,
         ..Default::default()
     };
     eframe::run_native(
@@ -55,9 +56,8 @@ impl eframe::App for QuickCaptureApp {
             },
             Views::Settings => self.settings_view(ctx, _frame),
             Views::Capture => {
-                // Quando viene chiamata la finestra va mostrata
-                // _frame.set_visible(false);
-                self.screenshot_view(ctx, _frame)
+                _frame.set_decorations(false);
+                self.screenshot_view(ctx, _frame);
             },
         }
 

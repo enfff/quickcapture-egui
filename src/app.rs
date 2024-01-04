@@ -57,23 +57,24 @@ impl QuickCaptureApp {
 
     // Views (the current view)
     pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
+        // Non ci serve una barra dei menu
+        // egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        //     // The top panel is often a good place for a menu bar:
 
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-                {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            _frame.close();
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
+        //     egui::menu::bar(ui, |ui| {
+        //         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
+        //         {
+        //             ui.menu_button("File", |ui| {
+        //                 if ui.button("Quit").clicked() {
+        //                     _frame.close();
+        //                 }
+        //             });
+        //             ui.add_space(16.0);
+        //         }
 
-                egui::widgets::global_dark_light_mode_buttons(ui);
-            });
-        });
+        //         egui::widgets::global_dark_light_mode_buttons(ui);
+        //     });
+        // });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
@@ -136,8 +137,12 @@ impl QuickCaptureApp {
                     // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
                     // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
                     ui.add(
-                        egui::Image::new(&self.texture.clone().unwrap()).max_width(ctx.used_size()[0])
-                    );
+                        // egui::Image::new(&self.texture.clone().unwrap()).max_size([(ctx.used_size()[0]*0.98), 1080.*0.98].into())
+                        egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0], _frame.info().window_info.size[1] - 32.].into())
+                        // 32px è l'altezza stimata della top bar + decorations
+
+                    )
+                    // Mi dispiace Daniele non c'è tempo...
                     
                     // Infatti se printi questo
                     // println!("ctx_used_size {:?}", ctx.used_size());
@@ -146,17 +151,6 @@ impl QuickCaptureApp {
 
                 // ui.centered_and_justified(add_contents)
             }
-
-            
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                // powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-                ui.add(egui::github_link_file!(
-                    "https://github.com/enfff/quickcapture-egui/blob/master/",
-                    "Source code"
-                ));
-            });
         });
 
         
@@ -170,18 +164,29 @@ impl QuickCaptureApp {
             if ui.button("go back").clicked(){
                 self.view = Views::Home;
             };
+            
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                // powered_by_egui_and_eframe(ui);
+                egui::warn_if_debug_build(ui);
+                ui.add(egui::github_link_file!(
+                    "https://github.com/enfff/quickcapture-egui/blob/master/",
+                    "Source code"
+                ));
+            });
         });
+
+        
     }
     
     pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         println!("screenshot_view");
 
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
-
+        // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
         if self.screenshot_type.is_some() {
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
-            // quick and dirty solution, i wasted TOO much time on this...
+            // quick and dirty solution, not too proud but i couldn't find any  other way around it...
             thread::sleep(time::Duration::from_millis(150));
 
             let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
@@ -192,7 +197,6 @@ impl QuickCaptureApp {
                 let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
                 tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
             });
-
             
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
             
@@ -214,6 +218,7 @@ impl QuickCaptureApp {
             _frame.set_visible(true);
             println!("Screenshot type is none");
 
+            // Maschera sopra lo schermo per scegliere il tipo di screenshot
             egui::Window::new("screenshot_view")
                 .title_bar(false)
                 .fixed_pos(egui::pos2(0.0, 0.0))
