@@ -41,11 +41,14 @@ impl Painting {
 
     // Trovare un nome migliore per where_i_am_painting
     pub fn ui_content(&mut self, ui: &mut egui::Ui, where_i_am_painting: &egui::TextureHandle) -> egui::Response {
+
+        let current_size = egui::Vec2::from(ui.available_size());
+        
         let (mut response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
+            ui.allocate_painter(current_size, egui::Sense::drag());
 
         let to_screen = egui::emath::RectTransform::from_to(
-            egui::Rect::from_min_size(egui::Pos2::ZERO, response.rect.square_proportions()),
+            egui::Rect::from_min_size(egui::Pos2::ZERO, response.rect.size()),
             response.rect,
         );
 
