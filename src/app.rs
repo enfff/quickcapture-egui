@@ -5,11 +5,13 @@ use image::{RgbaImage, ImageBuffer};
 mod screenshot_utils;
 mod save_utils;
 mod image_utils;
+mod painting_utils;
 
 pub enum Views {
     Home,
     Settings,
     Capture,
+    Save,
 }
 
 #[derive(Clone)]
@@ -23,26 +25,26 @@ pub struct QuickCaptureApp {
     // Used by the tokio runtime
     pub tx: mpsc::Sender<std::time::Duration>,
     pub rx: mpsc::Receiver<std::time::Duration>,
-    pub is_app_saving: bool,
-    texture: Option<egui::TextureHandle>,   // Used to display the screenshot
-    screenshot_image_buffer: Option<RgbaImage>,
+    screenshot_image_buffer: Option<RgbaImage>,         // The screenshot data
     screenshot_type: Option<ScreenshotType>,
+    painting: Option<painting_utils::Painting>,         // UI and methods to draw on the screenshot
+    painted_screenshot: Option<egui::TextureHandle>,    // The screenshot with the drawing on it.
 }
 
 impl Default for QuickCaptureApp {
     fn default() -> Self {
-
+        
         let (tx, rx) = std::sync::mpsc::channel::<std::time::Duration>();
-
+        
         // Default options
         Self {
             view: Views::Home,
             tx,
             rx,
-            texture: None,
             screenshot_type: None,
-            screenshot_image_buffer: None,
-            is_app_saving: false,
+            screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
+            painting: None, 
+            painted_screenshot: None,
         }
     }
 }
@@ -57,28 +59,12 @@ impl QuickCaptureApp {
 
     // Views (the current view)
     pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Non ci serve una barra dei menu
-        // egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-        //     // The top panel is often a good place for a menu bar:
-
-        //     egui::menu::bar(ui, |ui| {
-        //         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-        //         {
-        //             ui.menu_button("File", |ui| {
-        //                 if ui.button("Quit").clicked() {
-        //                     _frame.close();
-        //                 }
-        //             });
-        //             ui.add_space(16.0);
-        //         }
-
-        //         egui::widgets::global_dark_light_mode_buttons(ui);
-        //     });
-        // });
-
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
+            // Some emojis can be used as icons!
+            // https://docs.rs/egui/0.24.1/egui/special_emojis/index.html
+            // https://www.egui.rs/#demo (Font Book)
 
             ui.horizontal(|ui| {
                 if ui.small_button("📷 Take Screenshot").clicked() {
@@ -86,27 +72,49 @@ impl QuickCaptureApp {
                     self.view = Views::Capture;
                 }
                 
-                
                 if self.screenshot_image_buffer.is_some(){
                     // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
                     
                     ui.separator();
                     if ui.small_button("💾 Save").clicked() {
                         println!("Save button pressed");
-                        if self.screenshot_image_buffer.is_some() {
+                        if self.painted_screenshot.is_some() {
+                            println!("in questo momento salva l'immagine senza paint, ci sto lavorando");
                             save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
+                            // save_utils::save_image(self.painted_screenshot, "screenshot.png", self.tx.clone());
                         }
                     }
                     
-                    ui.separator();
-                    if ui.small_button("↖ Arrow").clicked() {
-                        println!("Clicked arrow button")
-                    }
+                    // ui.separator();
+                    // if ui.small_button("⬈ Arrow").clicked() {
+                    //     println!("Clicked arrow button")
+                    // }
                     
-                    ui.separator();
-                    if ui.small_button("| Line").clicked() {
-                        println!("Clicked line button")
-                    }
+                    // // ui.separator();
+                    // // if ui.small_button("| Line").clicked() {
+                    // //     println!("Clicked line button")
+                    // // }
+
+                    // ui.separator();
+                    // if ui.small_button("⭕ Circle").clicked() {
+                    //     println!("Clicked circle button")
+                    // }
+
+                    // ui.separator();
+                    // if ui.small_button("◻ Rectangle").clicked() {
+                    //     println!("Clicked square button")
+                    // }
+
+                    // ui.separator();
+                    // if ui.small_button("⮪").clicked(){
+                    //     println!("Clicked undo button")
+                    
+                    // }
+
+                    // ui.separator();
+                    // if ui.small_button("⮩").clicked(){
+                    //     println!("Clicked redo button")
+                    // }
 
                 }
 
@@ -122,42 +130,69 @@ impl QuickCaptureApp {
                 ui.centered_and_justified(|ui| ui.label("Take a screenshot"));
 
             } else {
-                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo
-                ui.centered_and_justified(|ui| {
-                    // Shouldn't be calling this here, read docs!
-                    self.texture = Some(ui.ctx().load_texture(
-                        "current_screenshot",
-                        image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
-                        Default::default(),
-                    ));
+                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo e disegnaci
+                // Versione vecchia 
+                // ui.centered_and_justified(|ui| {
+                //     // Shouldn't be calling this here, read docs!
+                //     self.texture = Some(ui.ctx().load_texture(
+                //         "current_screenshot",
+                //         image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                //         Default::default(),
+                //     ));
 
-                    // Older alternative
-                    // ui.image(&self.texture.clone().unwrap());
+                //     // Older alternative
+                //     // ui.image(&self.texture.clone().unwrap());
 
-                    // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
-                    // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
-                    ui.add(
-                        // egui::Image::new(&self.texture.clone().unwrap()).max_size([(ctx.used_size()[0]*0.98), 1080.*0.98].into())
-                        egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0], _frame.info().window_info.size[1] - 32.].into())
-                        // 32px è l'altezza stimata della top bar + decorations
-
-                    )
-                    // Mi dispiace Daniele non c'è tempo...
+                //     // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
+                //     // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
+                //     ui.add(
+                //         // egui::Image::new(&self.texture.clone().unwrap()).max_size([(ctx.used_size()[0]*0.98), 1080.*0.98].into())
+                //         // egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0], _frame.info().window_info.size[1] - 32.].into())
+                //         egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0]*0.2, _frame.info().window_info.size[1]*0.2].into())
+                //         // 32px è l'altezza della top bar + decorations
+                //     );
                     
-                    // Infatti se printi questo
-                    // println!("ctx_used_size {:?}", ctx.used_size());
-                    // Esce sempre [xxx, 24.0]
+                // });
+
+                ui.vertical(|ui| {
+                    // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
+                    if self.screenshot_image_buffer.is_some() {
+
+                        if self.painting.is_none(){
+                            self.painting = Some(painting_utils::Painting::new());
+                            self.painted_screenshot = Some(ui.ctx().load_texture(
+                                "painted_screenshot",
+                                image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                                Default::default(),
+                            ));
+                        }
+
+
+                        let painting = self.painting.as_mut().unwrap();
+
+                        // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
+                        painting.ui_control(ui);
+
+                        egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                            painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
+                        });
+
+                        self.painting = Some(painting.clone());
+                    };
                 });
 
-                // ui.centered_and_justified(add_contents)
-            }
-        });
 
-        
+            }
+        } // Central Panel
+    
+    );
+    
 
     }
 
+
     pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             println!("settings_view");
             ui.label("Settings view");
@@ -173,13 +208,11 @@ impl QuickCaptureApp {
                     "Source code"
                 ));
             });
-        });
-
-        
+        });   
     }
     
     pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        println!("screenshot_view");
+        // println!("screenshot_view");
 
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
@@ -200,13 +233,9 @@ impl QuickCaptureApp {
             
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
             
-            // save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
             self.view = Views::Home;
             self.screenshot_type = None;
         }
-
-        let width = _frame.info().window_info.monitor_size.unwrap().x;
-        let height = _frame.info().window_info.monitor_size.unwrap().y;
 
         // Mostra UI per generare screenshot
 
@@ -216,7 +245,6 @@ impl QuickCaptureApp {
 
         if self.screenshot_type.is_none() {
             _frame.set_visible(true);
-            println!("Screenshot type is none");
 
             // Maschera sopra lo schermo per scegliere il tipo di screenshot
             egui::Window::new("screenshot_view")
@@ -251,7 +279,7 @@ impl QuickCaptureApp {
                                 // Hides the screen
                                 _frame.set_visible(false);
                                 ui.set_visible(false);
-                                ctx.request_repaint();   
+                                ctx.request_repaint();
                             }
 
                             // TODO scommenta
@@ -259,7 +287,16 @@ impl QuickCaptureApp {
                     });
                 });
         }
+    }
 
-
+    pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            // println!("settings_view");
+            ui.label("Save view");
+            if ui.button("Go back").clicked(){
+                self.view = Views::Home;
+            };
+        
+        });
     }
 }

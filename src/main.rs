@@ -44,8 +44,7 @@ impl eframe::App for QuickCaptureApp {
 
         //timer event receiver
         if let Ok(duration) = self.rx.try_recv() {
-            println!("Time spent {:?}", duration);
-            self.is_app_saving = false;
+            println!("Image saved in {:?}", duration);
         }
 
         match self.view {
@@ -54,10 +53,15 @@ impl eframe::App for QuickCaptureApp {
                 _frame.set_decorations(true);
                 self.home_view(ctx, _frame);
             },
-            Views::Settings => self.settings_view(ctx, _frame),
             Views::Capture => {
                 _frame.set_decorations(false);
                 self.screenshot_view(ctx, _frame);
+            },
+            Views::Settings => {
+                self.settings_view(ctx, _frame)
+            },
+            Views::Save => {
+                self.save_view(ctx, _frame);
             },
         }
 
