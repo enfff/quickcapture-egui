@@ -1,141 +1,216 @@
-use screenshots::Screen;
+use std::sync::mpsc;
+use std::{thread, time};
+use image::{RgbaImage, ImageBuffer};
 
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+mod screenshot_utils;
+mod save_utils;
+mod image_utils;
+mod painting_utils;
+
+pub enum Views {
+    Home,
+    Settings,
+    Capture,
+    Save,
+}
+
+#[derive(Clone)]
+pub enum ScreenshotType {
+    FullScreen,
+    PartialScreen,
+}
 
 pub struct QuickCaptureApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    pub view: Views,
+    // Used by the tokio runtime
+    pub tx: mpsc::Sender<std::time::Duration>,
+    pub rx: mpsc::Receiver<std::time::Duration>,
+    screenshot_image_buffer: Option<RgbaImage>,         // The screenshot data
+    screenshot_type: Option<ScreenshotType>,
+    painting: Option<painting_utils::Painting>,         // UI and methods to draw on the screenshot
+    painted_screenshot: Option<egui::TextureHandle>,    // The screenshot with the drawing on it.
+    pub took_new_screenshot: bool,
 }
 
 impl Default for QuickCaptureApp {
     fn default() -> Self {
+        
+        let (tx, rx) = std::sync::mpsc::channel::<std::time::Duration>();
+        
+        // Default options
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            view: Views::Home,
+            tx,
+            rx,
+            screenshot_type: None,
+            screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
+            painting: None, 
+            painted_screenshot: None,
+            took_new_screenshot: false,
         }
     }
 }
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 impl QuickCaptureApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
-
         Default::default()
     }
-}
 
-impl eframe::App for QuickCaptureApp {
-    /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    /// Called each time the UI needs repainting, which may be many times per second.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-        
-        // As explained in https://docs.rs/egui/latest/egui/load/index.html
-        egui_extras::install_image_loaders(ctx);
-
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-                {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            _frame.close();
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
-            });
-        });
-
+    // Views (the current view)
+    pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            // ui.heading("eframe template");
+
+            // Some emojis can be used as icons!
+            // https://docs.rs/egui/0.24.1/egui/special_emojis/index.html
+            // https://www.egui.rs/#demo (Font Book)
 
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            // if ui.button("Increment").clicked() {
-            //     self.value += 1.0;
-            // }
-
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                if ui.small_button("📷 Screenshot").clicked() {
+                if ui.small_button("📷 Take Screenshot").clicked() {
                     println!("Screenshot button pressed");
-
-                    let screens = Screen::all().unwrap();
-
-                    for screen in screens {
-                        let image = screen.capture().unwrap();
-                        image
-                            .save(format!("target/{}.png", screen.display_info.id))
-                            .unwrap();
+                    self.view = Views::Capture;
+                }
+                
+                if self.screenshot_image_buffer.is_some(){
+                    // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
+                    
+                    ui.separator();
+                    if ui.small_button("💾 Save").clicked() {
+                        println!("Save button pressed");
+                        if self.painted_screenshot.is_some() {
+                            println!("in questo momento salva l'immagine senza paint, ci sto lavorando");
+                            save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
+                            // save_utils::save_image(self.painted_screenshot.unwrap(),  self.tx.clone());
+                        }
                     }
+                    
+                    // ui.separator();
+                    // if ui.small_button("⬈ Arrow").clicked() {
+                    //     println!("Clicked arrow button")
+                    // }
+                    
+                    // // ui.separator();
+                    // // if ui.small_button("| Line").clicked() {
+                    // //     println!("Clicked line button")
+                    // // }
 
-                    // TODO Rendere il percorso valido per tutti i sistemi operativi
-                    // Docs: https://github.com/emilk/egui/blob/c69fe941afdea5ef6f3f84ed063554500b6262e8/eframe/examples/image.rs
+                    // ui.separator();
+                    // if ui.small_button("⭕ Circle").clicked() {
+                    //     println!("Clicked circle button")
+                    // }
 
+                    // ui.separator();
+                    // if ui.small_button("◻ Rectangle").clicked() {
+                    //     println!("Clicked square button")
+                    // }
+
+                    // ui.separator();
+                    // if ui.small_button("⮪").clicked(){
+                    //     println!("Clicked undo button")
+                    
+                    // }
+
+                    // ui.separator();
+                    // if ui.small_button("⮩").clicked(){
+                    //     println!("Clicked redo button")
+                    // }
 
                 }
 
-                ui.add_space(4.0);
-
-                if ui.small_button("💾 Save").clicked() {
-                    println!("Save button pressed")
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("↖ Arrow").hovered() {
-                    println!("Hovering on arrow button")
-                }
-
-                ui.add_space(4.0);
-
-                if ui.small_button("| Line").clicked() {
-                    println!("Pressed line button")
+                ui.separator();
+                if ui.small_button("Settings").clicked() {
+                    println!("Settings button pressed");
+                    self.view = Views::Settings;
                 }
             });
 
+            if self.screenshot_image_buffer.is_none(){
+                // Ancora non è stato fatto alcuno screenshot
+                ui.centered_and_justified(|ui| ui.label("Take a screenshot"));
 
-            // LOAD IMAGES
+            } else {
+                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo e disegnaci
+                // Scommenta per visualizzare solamente la foto 
+                // ui.centered_and_justified(|ui| {
+                //     // Shouldn't be calling this here, read docs!
+                    
+                //     self.painted_screenshot = Some(ui.ctx().load_texture(
+                //         "current_screenshot",
+                //         image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                //         Default::default(),
+                //     ));
 
-            // Add egui_extras as a dependency with the all_loaders feature.
-            // Add a call to egui_extras::install_image_loaders in your app’s setup code.
-            // Use Ui::image with some ImageSource.
-            // https://docs.rs/egui/latest/egui/load/index.html
+                //     // Older alternative
+                //     // ui.image(&self.texture.clone().unwrap());
 
-            ui.add(
-                egui::Image::new(egui::include_image!("../target/33.png"))
-                    .rounding(5.0)
-            );
+                //     // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
+                //     // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
+                //     ui.add(
+                //         egui::Image::new(&self.painted_screenshot.clone().unwrap()).max_size([_frame.info().window_info.size[0]*0.98, _frame.info().window_info.size[1]*0.98 - 32.].into())
+                //         // 32px è l'altezza della top bar + decorations
+                //     );
+                    
+                // });
+
+                
+
+
+
+
+
+                // Dovrebbe caricare il coso che disegna sopra lo screenshot
+                // TODO ci sto bestemmiando ancora non funziona
+                
+                // ui.vertical(|ui| {
+                //     // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
+                //     if self.screenshot_image_buffer.is_some() {
+
+                //         if self.painting.is_none() {
+
+                //             // load_texture() This can be used only once....
+                //             self.painted_screenshot = Some(ui.ctx().load_texture(
+                //                 "painted_screenshot",
+                //                 image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                //                 Default::default(),
+                //             ));
+                            
+                //             self.painting = Some(painting_utils::Painting::new(self.painted_screenshot.clone()));
+                //         }
+
+                //         let painting = self.painting.as_mut().unwrap();
+
+                //         // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
+                //         painting.ui_control(ui);
+                //         painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
+                //         // egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                //         //     painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap())
+                //         // });
+
+                //         self.painting = Some(painting.clone());
+                //     };
+                // });
+
+
+            }
+        } // Central Panel
+    
+    );
+    
+
+    }
+
+
+    pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Will contain the shortcuts
+        egui::CentralPanel::default().show(ctx, |ui| {
+            println!("settings_view");
+            ui.label("Settings view");
+            if ui.button("go back").clicked(){
+                self.view = Views::Home;
+            };
             
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
@@ -145,23 +220,95 @@ impl eframe::App for QuickCaptureApp {
                     "Source code"
                 ));
             });
+        });   
+    }
+    
+    pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // println!("screenshot_view");
 
+        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
+        // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
+        if self.screenshot_type.is_some() {
+            // It's not the screenshot, but the data describing it. It needs to be converted to an image.
+
+            // quick and dirty solution, not too proud but i couldn't find any  other way around it...
+            thread::sleep(time::Duration::from_millis(150));
+
+            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
+            let tmp_screenshot_type = self.screenshot_type.clone();
+
+            // Take the screenshot and wait until it's done
+            thread::spawn(move || {
+                let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
+                tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
+            });
             
+            self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
+            self.took_new_screenshot = true;
+            println!("took_new_screenshot is true");
+            self.view = Views::Home;
+            self.screenshot_type = None;
+        }
 
+        // Mostra UI per generare screenshot
+
+        // Se l'utente non ha scelto che tipo di screenshot fare (tra FullScreen e PartialScreen)
+        // Questa funzione viene chiamata ad ogni update() che può avvenire più volte in un secondo.
+        // Siccome noi vogliamo che lo per chiamata di "screenshot_view", si fa un controllo con un contatore
+
+        if self.screenshot_type.is_none() {
+            _frame.set_visible(true);
+
+            // Maschera sopra lo schermo per scegliere il tipo di screenshot
+            egui::Window::new("screenshot_view")
+                .title_bar(false)
+                .fixed_pos(egui::pos2(0.0, 0.0))
+                .show(ctx, |ui| {
+                    // self.id = Some(ui.layer_id());
+                    ui.horizontal(|ui| {
+                        ui.horizontal(|ui| {
+                            
+                            if ui.button("⛶").clicked() {
+                                self.screenshot_type = Some(ScreenshotType::PartialScreen);
+                                println!("PartialScreen button pressed");
+                            }
+                            ui.separator();
+
+                            if ui.button("🖵").clicked() {
+                                self.screenshot_type = Some(ScreenshotType::FullScreen);
+                                println!("FullScreen button pressed");
+                            }
+                            ui.separator();
+
+                            if ui.button("◀").clicked() {
+                                // restore_dim(&None, _frame, Some(Views::Home));
+                                self.view = Views::Home;
+                            }
+
+                            if self.screenshot_type.is_some() {
+                                // L'utente ha scelto che screenshot da fare
+                                println!("screenshot_type is some");
+                                
+                                // Hides the screen
+                                _frame.set_visible(false);
+                                ui.set_visible(false);
+                                ctx.request_repaint();
+                            }
+
+                        });
+                    });
+                });
+        }
+    }
+
+    pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            // println!("settings_view");
+            ui.label("Save view");
+            if ui.button("Go back").clicked(){
+                self.view = Views::Home;
+            };
+        
         });
     }
 }
-
-// fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-//     ui.horizontal(|ui| {
-//         ui.spacing_mut().item_spacing.x = 0.0;
-//         ui.label("Powered by ");
-//         ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-//         ui.label(" and ");
-//         ui.hyperlink_to(
-//             "eframe",
-//             "https://github.com/emilk/egui/tree/master/crates/eframe",
-//         );
-//         ui.label(".");
-//     });
-// }
