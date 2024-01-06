@@ -29,6 +29,7 @@ pub struct QuickCaptureApp {
     screenshot_type: Option<ScreenshotType>,
     painting: Option<painting_utils::Painting>,         // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>,    // The screenshot with the drawing on it.
+    pub took_new_screenshot: bool,
 }
 
 impl Default for QuickCaptureApp {
@@ -45,6 +46,7 @@ impl Default for QuickCaptureApp {
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None, 
             painted_screenshot: None,
+            took_new_screenshot: false,
         }
     }
 }
@@ -80,8 +82,8 @@ impl QuickCaptureApp {
                         println!("Save button pressed");
                         if self.painted_screenshot.is_some() {
                             println!("in questo momento salva l'immagine senza paint, ci sto lavorando");
-                            save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), "screenshot.png", self.tx.clone());
-                            // save_utils::save_image(self.painted_screenshot, "screenshot.png", self.tx.clone());
+                            save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
+                            // save_utils::save_image(self.painted_screenshot.unwrap(),  self.tx.clone());
                         }
                     }
                     
@@ -131,10 +133,11 @@ impl QuickCaptureApp {
 
             } else {
                 // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo e disegnaci
-                // Versione vecchia 
+                // Scommenta per visualizzare solamente la foto 
                 // ui.centered_and_justified(|ui| {
                 //     // Shouldn't be calling this here, read docs!
-                //     self.texture = Some(ui.ctx().load_texture(
+                    
+                //     self.painted_screenshot = Some(ui.ctx().load_texture(
                 //         "current_screenshot",
                 //         image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
                 //         Default::default(),
@@ -146,40 +149,49 @@ impl QuickCaptureApp {
                 //     // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
                 //     // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
                 //     ui.add(
-                //         // egui::Image::new(&self.texture.clone().unwrap()).max_size([(ctx.used_size()[0]*0.98), 1080.*0.98].into())
-                //         // egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0], _frame.info().window_info.size[1] - 32.].into())
-                //         egui::Image::new(&self.texture.clone().unwrap()).max_size([_frame.info().window_info.size[0]*0.2, _frame.info().window_info.size[1]*0.2].into())
+                //         egui::Image::new(&self.painted_screenshot.clone().unwrap()).max_size([_frame.info().window_info.size[0]*0.98, _frame.info().window_info.size[1]*0.98 - 32.].into())
                 //         // 32px è l'altezza della top bar + decorations
                 //     );
                     
                 // });
 
-                ui.vertical(|ui| {
-                    // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
-                    if self.screenshot_image_buffer.is_some() {
-
-                        if self.painting.is_none(){
-                            self.painting = Some(painting_utils::Painting::new());
-                            self.painted_screenshot = Some(ui.ctx().load_texture(
-                                "painted_screenshot",
-                                image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
-                                Default::default(),
-                            ));
-                        }
+                
 
 
-                        let painting = self.painting.as_mut().unwrap();
 
-                        // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
-                        painting.ui_control(ui);
 
-                        egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                            painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
-                        });
 
-                        self.painting = Some(painting.clone());
-                    };
-                });
+                // Dovrebbe caricare il coso che disegna sopra lo screenshot
+                // TODO ci sto bestemmiando ancora non funziona
+                
+                // ui.vertical(|ui| {
+                //     // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
+                //     if self.screenshot_image_buffer.is_some() {
+
+                //         if self.painting.is_none() {
+
+                //             // load_texture() This can be used only once....
+                //             self.painted_screenshot = Some(ui.ctx().load_texture(
+                //                 "painted_screenshot",
+                //                 image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                //                 Default::default(),
+                //             ));
+                            
+                //             self.painting = Some(painting_utils::Painting::new(self.painted_screenshot.clone()));
+                //         }
+
+                //         let painting = self.painting.as_mut().unwrap();
+
+                //         // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
+                //         painting.ui_control(ui);
+                //         painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
+                //         // egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                //         //     painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap())
+                //         // });
+
+                //         self.painting = Some(painting.clone());
+                //     };
+                // });
 
 
             }
@@ -232,7 +244,8 @@ impl QuickCaptureApp {
             });
             
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
-            
+            self.took_new_screenshot = true;
+            println!("took_new_screenshot is true");
             self.view = Views::Home;
             self.screenshot_type = None;
         }
@@ -263,7 +276,7 @@ impl QuickCaptureApp {
 
                             if ui.button("🖵").clicked() {
                                 self.screenshot_type = Some(ScreenshotType::FullScreen);
-                                println!("Fullscreen button pressed");
+                                println!("FullScreen button pressed");
                             }
                             ui.separator();
 
@@ -274,7 +287,7 @@ impl QuickCaptureApp {
 
                             if self.screenshot_type.is_some() {
                                 // L'utente ha scelto che screenshot da fare
-                                println!("scrernshot_type is some");
+                                println!("screenshot_type is some");
                                 
                                 // Hides the screen
                                 _frame.set_visible(false);
@@ -282,7 +295,6 @@ impl QuickCaptureApp {
                                 ctx.request_repaint();
                             }
 
-                            // TODO scommenta
                         });
                     });
                 });
