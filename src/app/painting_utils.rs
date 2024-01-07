@@ -3,6 +3,9 @@
 
 // Should
 
+use eframe::egui_glow::painter;
+use egui::Vec2;
+
 #[derive(Clone)]
 pub struct Painting {
     /// in 0-1 normalized coordinates
@@ -50,52 +53,85 @@ impl Painting {
 
     // Trovare un nome migliore per where_i_am_painting
     pub fn ui_content(&mut self, ui: &mut egui::Ui, texture: &egui::TextureHandle) -> egui::Response {
+        // Ritorna una egui::Response, cioè l'esito dell'aggiunta di un widget nella ui. Per farlo,
+        // prima crea una UI che mostra lo screenshot come sfondo di un oggetto painter, cioè un
+        // livello su cui disegni. Poi, cattura il movimento del mouse per permettere di disegnare, 
+        // e infine mappa i disegni che hai fatto sopra l'oggetto painter.
+        
+        // Bisogna ancora copiare i disegni sopra lo screenshot, covnertirlo in un formato opportuno
+        // e salvarlo
 
         if self.lines.is_empty() {
             self.lines.push(vec![]);
         }
 
-        // Mostra lo screenshot come sfondo di un canvas, cioè un livello su cui disegni
+        let ui_available_size: egui::Vec2 = ui.available_size();                    // Dimensione della UI
+        let texture_size: egui::Vec2 = egui::Vec2::from(texture.size_vec2());       // Dimensione dello screenshot
 
-        let current_size: egui::Vec2 = ui.available_size();
-        let aspect_ratio = texture.aspect_ratio();
+        let aspect_ratio = texture.aspect_ratio();                              // Aspect ratio dello screenshot
 
-        
-        // Calcola la dimensione del canvas rispetto la dimensione dello screenshot.
-        // Questa dimensione viene poi usata per la canvas, e la sua texture
-        let mut desired_size: egui::Vec2 = 
-        if current_size.min_elem() == current_size.x {
-            egui::Vec2::from([current_size.x, current_size.x/aspect_ratio])
-        } else {
-            egui::Vec2::from([aspect_ratio*current_size.y, current_size.y])
-
-        };
-
-        // See è troppo piccola (<400), rendila lameno 400
-        if desired_size.x < 600. {
-            println!("Old Desired size: {:?}", desired_size);
-            desired_size = egui::Vec2::from([600., 600./aspect_ratio]);
-            println!("New Desired size: {:?}", desired_size);
-        }
+        // Definisce la grandezza dell'immagine su cui stai disegnando. Prende sempre la grandezza minore
+        // tra la grandezza della UI e quella dello screenshot, mantendo intatto l'aspect ratio.
+        // Ci sono problemi intrinseci quando la UI è troppo piccola -> dobbiamo assicurari abbia almeno una certa dimensione fissa
         
         // Alloca un oggetto Painter che disegna soltanto in un rettangolo di dimensione desired_size
-        let (mut response, painter) = ui.allocate_painter(desired_size, egui::Sense::drag());
+        
+        // Biggest size possible for the painting by keeping the ar intact
+        
+        let mut painting_size = Vec2::ZERO;
+
+        if ui_available_size.x < ui_available_size.y && aspect_ratio >= 1.{
+            // Image is FAT, and x < y
+            painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
+        } else if ui_available_size.x > ui_available_size.y {
+            // Image is FAT, and x >= y
+            painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y])
+        };
+        
+        let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
+
+        // if texture.aspect_ratio() >= 1. {
+        //     println!("Fat image: {:?}", texture.aspect_ratio());
+        //     painting_size = if ui_available_size.x < texture_size.x {
+        //         egui::Vec2::from([ui_available_size.x, ui_available_size.x / aspect_ratio])
+        //     } else {
+        //         egui::Vec2::from([texture_size.x, texture_size.x/aspect_ratio])
+        //     };
+        // } else {
+        //     println!("Tall image: {:?}", texture.aspect_ratio());
+        //     painting_size = if ui_available_size.y < texture_size.y {
+        //         egui::Vec2::from([ui_available_size.y * aspect_ratio, ui_available_size.y])
+        //     } else {
+        //         egui::Vec2::from([texture_size.y * aspect_ratio, texture_size.y])
+        //     };
+        // }
+
+        // See è troppo piccola (<400), rendila lameno 400
+        // if desired_size.x < 600. {
+        //     println!("Old Desired size: {:?}", desired_size);
+        //     desired_size = egui::Vec2::from([600., 600./aspect_ratio]);
+        //     println!("New Desired size: {:?}", desired_size);
+        // }
 
         // Shows the image we're drawing on
         painter.add(egui::Shape::image(
             texture.id(),
-            egui::Rect::from_min_size(egui::Pos2::ZERO, desired_size.clone()),                           // Rectangle containing the image
+            egui::Rect::from_min_size(response.rect.min, painting_size.clone()),                          // Rectangle containing the image
             egui::Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1., 1.)),            // uv should normally be Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)) unless you want to crop or flip the image. --> no clue
             egui::Color32::WHITE)
         );
         
+        // Normalizza ad 1
         let to_screen = egui::emath::RectTransform::from_to(
-            // egui::Rect::from_min_size(egui::Pos2::ZERO, response.rect.size()),
-            egui::Rect::from_min_size(egui::Pos2::ZERO, desired_size.clone()),          // Alloca un rettangolo disegnato da (0,0) di dimensione desired_size
+            egui::Rect::from_min_size(egui::Pos2::ZERO, response.rect.square_proportions()),
             response.rect,
         );
-        // let from_screen = to_screen.inverse();              // Non lo so perché serve
-        let from_screen = to_screen.clone();              // Non lo so perché serve
+
+        let from_screen = to_screen.inverse();
+
+        if self.lines.is_empty() {
+            self.lines.push(vec![]);
+        }
 
         let current_line = self.lines.last_mut().unwrap();
 

@@ -21,6 +21,7 @@ eframe = { version = "0.23.0", default-features = false, features = [
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
 ] }
 log = "0.4"
+chrono = "0.4.1"
 
 # Used for images https://docs.rs/egui/latest/egui/load/index.html
 egui_extras = { version = "0.23.0", features = ["all_loaders"] }
