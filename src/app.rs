@@ -179,34 +179,34 @@ impl QuickCaptureApp {
                 // Dovrebbe caricare il coso che disegna sopra lo screenshot
                 // TODO ci sto bestemmiando ancora non funziona
                 
-                // ui.vertical(|ui| {
-                //     // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
-                //     if self.screenshot_image_buffer.is_some() {
+                ui.vertical_centered(|ui| {
+                    // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
+                    if self.screenshot_image_buffer.is_some() {
 
-                //         if self.painting.is_none() {
+                        if self.painting.is_none() {
 
-                //             // load_texture() This can be used only once....
-                //             self.painted_screenshot = Some(ui.ctx().load_texture(
-                //                 "painted_screenshot",
-                //                 image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
-                //                 Default::default(),
-                //             ));
+                            // load_texture() This can be used only once....
+                            self.painted_screenshot = Some(ui.ctx().load_texture(
+                                "painted_screenshot",
+                                image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
+                                Default::default(),
+                            ));
                             
-                //             self.painting = Some(painting_utils::Painting::new(self.painted_screenshot.clone()));
-                //         }
+                            self.painting = Some(painting_utils::Painting::new(self.painted_screenshot.clone()));
+                        }
 
-                //         let painting = self.painting.as_mut().unwrap();
+                        let painting = self.painting.as_mut().unwrap();
 
-                //         // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
-                //         painting.ui_control(ui);
-                //         painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
-                //         // egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                //         //     painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap())
-                //         // });
+                        // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
+                        painting.ui_control(ui);
+                        painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
+                        // egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                        //     painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap())
+                        // });
 
-                //         self.painting = Some(painting.clone());
-                //     };
-                // });
+                        self.painting = Some(painting.clone());
+                    };
+                });
 
 
             }
