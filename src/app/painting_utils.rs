@@ -82,11 +82,20 @@ impl Painting {
 
         if ui_available_size.x < ui_available_size.y && aspect_ratio >= 1.{
             // Image is FAT, and x < y
-            painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
+            // painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
+            painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
         } else if ui_available_size.x > ui_available_size.y {
             // Image is FAT, and x >= y
-            painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y])
+            // painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
+            // painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
+            painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
         };
+
+        // let mut painting_size = Vec2::ZERO;
+
+
+
+
         
         let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
 
