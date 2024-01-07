@@ -6,6 +6,10 @@ mod screenshot_utils;
 mod save_utils;
 mod image_utils;
 mod painting_utils;
+mod pathlib;
+
+use crate::app::save_utils::SavePath;
+
 
 pub enum Views {
     Home,
@@ -20,6 +24,14 @@ pub enum ScreenshotType {
     PartialScreen,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ImgFormats{
+    PNG,
+    JPEG,
+    GIF
+}
+
+
 pub struct QuickCaptureApp {
     pub view: Views,
     // Used by the tokio runtime
@@ -30,6 +42,7 @@ pub struct QuickCaptureApp {
     painting: Option<painting_utils::Painting>,         // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>,    // The screenshot with the drawing on it.
     pub took_new_screenshot: bool,
+    pub save_path: SavePath
 }
 
 impl Default for QuickCaptureApp {
@@ -47,6 +60,7 @@ impl Default for QuickCaptureApp {
             painting: None, 
             painted_screenshot: None,
             took_new_screenshot: false,
+            save_path: SavePath::new(std::env::current_dir().unwrap(), ImgFormats::PNG),
         }
     }
 }
@@ -80,9 +94,10 @@ impl QuickCaptureApp {
                     ui.separator();
                     if ui.small_button("💾 Save").clicked() {
                         println!("Save button pressed");
+                        self.view = Views::Save;
                         if self.painted_screenshot.is_some() {
                             println!("in questo momento salva l'immagine senza paint, ci sto lavorando");
-                            save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
+                            //save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
                             // save_utils::save_image(self.painted_screenshot.unwrap(),  self.tx.clone());
                         }
                     }
@@ -246,6 +261,8 @@ impl QuickCaptureApp {
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
             self.took_new_screenshot = true;
             println!("took_new_screenshot is true");
+            self.save_path.name = save_utils::generate_filename();
+            println!("default filename is: {}", self.save_path.name);
             self.view = Views::Home;
             self.screenshot_type = None;
         }
@@ -305,6 +322,12 @@ impl QuickCaptureApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // println!("settings_view");
             ui.label("Save view");
+            pathlib::ui(ui, &mut self.save_path);
+            if ui.button("Save").clicked(){
+                println!("Save button pressed");
+                save_utils::save_image(&self.save_path, self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
+                self.view = Views::Home;
+            };
             if ui.button("Go back").clicked(){
                 self.view = Views::Home;
             };

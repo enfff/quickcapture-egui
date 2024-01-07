@@ -11,3 +11,4 @@ pub fn load_image_from_memory(image_data: RgbaImage) -> ImageData {
     );
     return ImageData::from(color_image);   
 }
+
