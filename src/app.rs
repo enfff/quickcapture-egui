@@ -145,46 +145,12 @@ impl QuickCaptureApp {
             if self.screenshot_image_buffer.is_none(){
                 // Ancora non è stato fatto alcuno screenshot
                 ui.centered_and_justified(|ui| ui.label("Take a screenshot"));
-
             } else {
-                // È stato fatto uno screenshot il contenuto è dentro screenshot_image_buffer -> mostrala a schermo e disegnaci
-                // Scommenta per visualizzare solamente la foto 
-                // ui.centered_and_justified(|ui| {
-                //     // Shouldn't be calling this here, read docs!
-                    
-                //     self.painted_screenshot = Some(ui.ctx().load_texture(
-                //         "current_screenshot",
-                //         image_utils::load_image_from_memory(self.screenshot_image_buffer.clone().unwrap()),
-                //         Default::default(),
-                //     ));
-
-                //     // Older alternative
-                //     // ui.image(&self.texture.clone().unwrap());
-
-                //     // Si mette la larghezza della finestra come larghezza massima dell'immagine per scalarla quando si ridimensiona
-                //     // ho provato a usare max_size con ctx.used_size ma l'immagine esce piccolissima e di dimensione fissa...
-                //     ui.add(
-                //         egui::Image::new(&self.painted_screenshot.clone().unwrap()).max_size([_frame.info().window_info.size[0]*0.98, _frame.info().window_info.size[1]*0.98 - 32.].into())
-                //         // 32px è l'altezza della top bar + decorations
-                //     );
-                    
-                // });
-
-                
-
-
-
-
-
-                // Dovrebbe caricare il coso che disegna sopra lo screenshot
-                // TODO ci sto bestemmiando ancora non funziona
-                
+                // È stato fatto uno screenshot -> mostralo e se vuoi disegnaci
                 ui.vertical_centered(|ui| {
-                    // C'è uno screenshot -> dai l'opportunita di disegnarci sopra
                     if self.screenshot_image_buffer.is_some() {
-
                         if self.painting.is_none() {
-
+                            // REDO - Funziona ma potrebbe funzionare meglio; attualmente mostra solo il primo screenshot fatto
                             // load_texture() This can be used only once....
                             self.painted_screenshot = Some(ui.ctx().load_texture(
                                 "painted_screenshot",
@@ -199,10 +165,8 @@ impl QuickCaptureApp {
 
                         // Aggiunge i controlli per disegnare (linea, cerchio, quadrato, ecc...)
                         painting.ui_control(ui);
+                        // Aggiunge un livello che ha come sfondo lo screenshot su cui sopra è possibile disegnare
                         painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap());
-                        // egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                        //     painting.ui_content(ui, self.painted_screenshot.as_ref().unwrap())
-                        // });
 
                         self.painting = Some(painting.clone());
                     };

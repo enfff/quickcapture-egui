@@ -3,7 +3,6 @@
 
 // Should
 
-use eframe::egui_glow::painter;
 use egui::Vec2;
 
 #[derive(Clone)]
@@ -66,9 +65,8 @@ impl Painting {
         }
 
         let ui_available_size: egui::Vec2 = ui.available_size();                    // Dimensione della UI
-        let texture_size: egui::Vec2 = egui::Vec2::from(texture.size_vec2());       // Dimensione dello screenshot
 
-        let aspect_ratio = texture.aspect_ratio();                              // Aspect ratio dello screenshot
+        let aspect_ratio = texture.aspect_ratio();                             // Aspect ratio dello screenshot
 
         // Definisce la grandezza dell'immagine su cui stai disegnando. Prende sempre la grandezza minore
         // tra la grandezza della UI e quella dello screenshot, mantendo intatto l'aspect ratio.
@@ -76,57 +74,25 @@ impl Painting {
         
         // Alloca un oggetto Painter che disegna soltanto in un rettangolo di dimensione desired_size
         
+        // REDO - Funziona ma potrebbe andare meglio
         // Biggest size possible for the painting by keeping the ar intact
-        
         let mut painting_size = Vec2::ZERO;
 
         if ui_available_size.x < ui_available_size.y && aspect_ratio >= 1.{
             // Image is FAT, and x < y
-            // painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
-            painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
+            painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
         } else if ui_available_size.x > ui_available_size.y {
             // Image is FAT, and x >= y
-            // painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
-            // painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
-            painting_size = egui::Vec2::from([ui_available_size.x, ui_available_size.x/aspect_ratio]);
+            painting_size = egui::Vec2::from([ui_available_size.y*aspect_ratio, ui_available_size.y]);
         };
 
-        // let mut painting_size = Vec2::ZERO;
-
-
-
-
-        
         let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
-
-        // if texture.aspect_ratio() >= 1. {
-        //     println!("Fat image: {:?}", texture.aspect_ratio());
-        //     painting_size = if ui_available_size.x < texture_size.x {
-        //         egui::Vec2::from([ui_available_size.x, ui_available_size.x / aspect_ratio])
-        //     } else {
-        //         egui::Vec2::from([texture_size.x, texture_size.x/aspect_ratio])
-        //     };
-        // } else {
-        //     println!("Tall image: {:?}", texture.aspect_ratio());
-        //     painting_size = if ui_available_size.y < texture_size.y {
-        //         egui::Vec2::from([ui_available_size.y * aspect_ratio, ui_available_size.y])
-        //     } else {
-        //         egui::Vec2::from([texture_size.y * aspect_ratio, texture_size.y])
-        //     };
-        // }
-
-        // See è troppo piccola (<400), rendila lameno 400
-        // if desired_size.x < 600. {
-        //     println!("Old Desired size: {:?}", desired_size);
-        //     desired_size = egui::Vec2::from([600., 600./aspect_ratio]);
-        //     println!("New Desired size: {:?}", desired_size);
-        // }
 
         // Shows the image we're drawing on
         painter.add(egui::Shape::image(
             texture.id(),
             egui::Rect::from_min_size(response.rect.min, painting_size.clone()),                          // Rectangle containing the image
-            egui::Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1., 1.)),            // uv should normally be Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)) unless you want to crop or flip the image. --> no clue
+            egui::Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1., 1.)),         // uv should normally be Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)) unless you want to crop or flip the image. --> no clue
             egui::Color32::WHITE)
         );
         
@@ -164,12 +130,16 @@ impl Painting {
                 let points: Vec<egui::Pos2> = line.iter().map(|p| to_screen * *p).collect();
                 egui::Shape::line(points, self.stroke)
             });
-
+        
         painter.extend(shapes);
         response
     }
 
-    pub fn generate_rgba_image(&mut self) -> image::RgbaImage{
-        return image::RgbaImage::new(1920, 1080);
+    pub fn generate_rgba_image(&mut self, texture: &egui::TextureHandle) -> image::RgbaImage{
+        //  
+        
+
+        
+        return image::RgbaImage::new(10, 10);
     }
 }
