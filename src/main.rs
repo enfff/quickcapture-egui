@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use tokio::runtime::Runtime;
+// use tokio::runtime::Runtime;
 
 mod app;
 use app::QuickCaptureApp;
@@ -12,16 +12,16 @@ use crate::app::Views;
 fn main() -> eframe::Result<()> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
-    //tokio runtime https://docs.rs/tokio/latest/tokio/runtime/struct.Runtime.html
-    let rt = Runtime::new().expect("Unable to create Runtime");
-    let _enter = rt.enter();
-    std::thread::spawn(move || {
-        rt.block_on(async {
-            loop {
-                tokio::time::sleep(std::time::Duration::from_secs(1000)).await;
-            }
-        })
-    });
+    // //tokio runtime https://docs.rs/tokio/latest/tokio/runtime/struct.Runtime.html
+    // let rt = Runtime::new().expect("Unable to create Runtime");
+    // let _enter = rt.enter();
+    // std::thread::spawn(move || {
+    //     rt.block_on(async {
+    //         loop {
+    //             tokio::time::sleep(std::time::Duration::from_secs(1000)).await;
+    //         }
+    //     })
+    // });
 
     let native_options = eframe::NativeOptions {
         min_window_size: Some([300.0, 200.0].into()),
@@ -42,10 +42,10 @@ impl eframe::App for QuickCaptureApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui_extras::install_image_loaders(ctx); // Used to load images
 
-        //timer event receiver
-        if let Ok(duration) = self.rx.try_recv() {
-            println!("Image saved in {:?}", duration);
-        }
+        // //timer event receiver
+        // if let Ok(duration) = self.rx.try_recv() {
+        //     println!("Image saved in {:?}", duration);
+        // }
 
         match self.view {
             Views::Home => {

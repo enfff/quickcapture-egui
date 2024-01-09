@@ -1,7 +1,9 @@
 use image::ImageBuffer;
-use std::sync::mpsc::Sender;
+// use std::sync::mpsc::Sender;
 use crate::app::ImgFormats;
 use std::path::PathBuf;
+use std::sync::mpsc;
+use std::thread;
 use chrono::{DateTime, Local};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,10 +29,8 @@ impl SavePath {
 
 }
 
-pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Vec<u8>>, tx: Sender<std::time::Duration>){
+pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Vec<u8>>){
     // Do something
-    let instant = std::time::Instant::now(); // Start timer
-
     let mut pathname = save_path.path.to_string_lossy().to_string().to_owned();
     pathname.push_str("/");
     let filename = save_path.name.to_owned();
@@ -38,15 +38,12 @@ pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Ve
     pathname.push_str(".png");
     println!("Saving image to {}", pathname);
 
+    // thread::spawn(move || {
+    //     image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
+    //     // image::save_buffer(path,  &picture.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8); // for quick testing
+    // });
 
-    tokio::spawn(async move {
-        image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
-        // image::save_buffer(path,  &picture.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8); // for quick testing
-    });
-
-    let duration = instant.elapsed();
-    println!("save_image time elapsed: {:?}", duration);
-    tx.send(duration).unwrap();
+    image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
 }
 
 pub fn generate_filename() -> String {
