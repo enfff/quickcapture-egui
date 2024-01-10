@@ -1,6 +1,6 @@
 use image::{ImageBuffer, RgbaImage};
 use std::sync::mpsc;
-use std::{thread, time};
+use std::{thread, time, path};
 
 mod image_utils;
 mod painting_utils;
@@ -42,9 +42,6 @@ pub struct QuickCaptureApp {
 
 impl Default for QuickCaptureApp {
     fn default() -> Self {
-        // let (tx, rx) = std::sync::mpsc::channel::<std::time::Duration>();
-
-        // Default options
         Self {
             view: Views::Home,
             screenshot_type: None,
@@ -52,7 +49,7 @@ impl Default for QuickCaptureApp {
             painting: None,
             painted_screenshot: None,
             took_new_screenshot: false,
-            save_path: SavePath::new(std::env::current_dir().unwrap(), ImgFormats::PNG),
+            save_path: SavePath::new(std::env::current_dir().unwrap().join("target"), ImgFormats::PNG),         // Salva in <app_directory>/target/
         }
     }
 }
@@ -89,10 +86,6 @@ impl QuickCaptureApp {
                         if ui.small_button("💾 Save").clicked() {
                             println!("Save button pressed");
                             self.view = Views::Save;
-                            // if self.painted_screenshot.is_some() {
-                            //     // save_utils::save_image(self.screenshot_image_buffer.clone().unwrap(), self.tx.clone());
-                            //     // save_utils::save_image(self.painted_screenshot.unwrap(),  self.tx.clone());
-                            // }
                         }
                     }
 
