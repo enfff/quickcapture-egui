@@ -3,9 +3,11 @@
 
 // Should
 
-use egui::output;
-use image::{RgbaImage, Pixel};
-use imageproc::drawing::{Canvas, self};
+use std::ops::Add;
+
+use image::RgbaImage;
+use egui::widgets::DragValue;
+
 
 #[derive(Clone)]
 pub struct Painting {
@@ -46,7 +48,22 @@ impl Painting {
         }
 
         ui.horizontal(|ui| {
-            egui::stroke_ui(ui, &mut self.stroke, "Stroke");
+            // egui::stroke_ui(ui, &mut self.stroke, "Stroke");
+
+            // let epaint::Stroke { width, color } = self.stroke;
+
+            ui.horizontal(|ui| {
+                ui.add(DragValue::new(&mut self.stroke.width).speed(1).clamp_range(0..=12))
+                    .on_hover_text("Width");
+                ui.color_edit_button_srgba(&mut self.stroke.color);
+                ui.label("Stroke");
+
+                // stroke preview:
+                let (_id, stroke_rect) = ui.allocate_space(ui.spacing().interact_size);
+                let left = stroke_rect.left_center();
+                let right = stroke_rect.right_center();
+                ui.painter().line_segment([left, right], (*&mut self.stroke.width, *&mut self.stroke.color));
+            });
             
             ui.separator();
 
@@ -129,25 +146,35 @@ impl Painting {
         response
     }
 
-    pub fn generate_rgba_image(&mut self) -> image::RgbaImage{
+    pub fn generate_rgba_image(&mut self) -> RgbaImage{
         //  Prende tutte le shapes fatte, che sono composte da coordinate (egui::Pos2)
         let mut output_image = self.screenshot_image_buffer.clone();
+
+        println!("{:?}", self.stroke.width);
 
         // let from_screen = to_screen.inverse();
         
         // Ho dovuto clonare perché altrimenti dava problemi il borrow checker
         for line in self.lines.clone().iter() {
             for couple_points in line.windows(2) {
+                // *couple_points.add(egui::Pos2::new(self.stroke.width/2., self.stroke.width/2.));
 
-                let start = self.segment_coordinates(&couple_points[0]);
-                let end = self.segment_coordinates(&couple_points[1]);
+                for offset in 0..=self.stroke.width as u8 {
+                    
+                    let mut start = self.segment_coordinates(&couple_points[0], (offset, offset));
+                    let mut end = self.segment_coordinates(&couple_points[1], (offset, offset));
+                    imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
+                    // let rect = imageproc::rect::RectPosition::
 
-                // output_image.as_mut().unwrap().put_pixel(new_coordinates.x as u32, new_coordinates.y as u32, translucent_red);
-                // output_image.as_mut().unwrap().draw_line_segment_mut(start_coordinates, end_coordinates, translucent_red);
-
-                // let mut prova = output_image.as_mut().unwrap().get_pixel(start.0 as u32, start.1 as u32);
-
-                imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
+                    start = self.segment_coordinates(&couple_points[0], (0, offset));
+                    end = self.segment_coordinates(&couple_points[1], (0, offset));
+                    imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
+                    
+                    start = self.segment_coordinates(&couple_points[0], (offset, 0));
+                    end = self.segment_coordinates(&couple_points[1], (offset, 0));
+                    imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
+                    // imageproc::drawing::draw_filled_rect_mut(output_image.as_mut().unwrap(), start, end);
+                }
             }
         }
 
@@ -157,7 +184,7 @@ impl Painting {
 
 
 
-    fn segment_coordinates(&mut self, point: &egui::Pos2) -> (f32, f32){
+    fn segment_coordinates(&mut self, point: &egui::Pos2, offset: (u8, u8)) -> (f32, f32){
         // Trasforma le coordinate di un punto p che è stato normalizzato con proporzioni quadrate, in coordinate per l'immagine
 
         let w = self.screenshot_image_buffer.as_ref().unwrap().width();
@@ -172,7 +199,12 @@ impl Painting {
             rect_output_size,
         );
 
+        // .add(egui::Vec2::new(self.stroke.width/2. + offset as f32, self.stroke.width/2. + offset as f32))
+
         let mut new_coordinates = to_screen * *point;
+
+        // Add an offset to simulate the width
+        new_coordinates = new_coordinates.add(egui::Vec2::new(self.stroke.width/2. + offset.0 as f32, self.stroke.width/2. + offset.1 as f32));
 
         if new_coordinates.x > output_size.x {
             // If it's out the screen, then something went wrong

@@ -15,11 +15,8 @@ image = { version = "0.24", default-features = false, features = ["png", "jpeg",
 imageproc = "0.23.0"
 
 egui = "0.23.0"
-eframe = { version = "0.23.0", default-features = false, features = [
-    "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
-    "default_fonts", # Embed the default egui fonts.
-    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
-] }
+epaint = "0.23.0"   # egui paint module
+eframe = { version = "0.23.0", default-features = false, features = ["accesskit", "default_fonts", "glow"] }
 log = "0.4"
 chrono = "0.4.1"
 
