@@ -3,7 +3,7 @@
 
 // Should
 
-use std::ops::Add;
+use std::{ops::Add, vec};
 
 use image::RgbaImage;
 use egui::widgets::DragValue;
@@ -17,17 +17,20 @@ pub struct Painting {
     stroke: egui::Stroke,
     aspect_ratio: f32,
     screenshot_image_buffer: Option<RgbaImage>,
+    last_actions: Vec<Vec<egui::Pos2>>,                 // Used to go back in time!
 }
 
 impl Default for Painting {
     fn default() -> Self {
         Self {
-            lines: Default::default(),
+            // lines: Default::default(),
+            lines: vec![vec![]],
             stroke: egui::Stroke::new(1.0, egui::Color32::from_rgb(18, 160, 215)),
             // https://teamcolorcodes.com/napoli-color-codes/
             texture: None,
             screenshot_image_buffer: None,
             aspect_ratio: 1.,
+            last_actions: vec![vec![]],
         }
     }
 }
@@ -55,7 +58,7 @@ impl Painting {
             ui.horizontal(|ui| {
                 ui.add(DragValue::new(&mut self.stroke.width).speed(1).clamp_range(0..=12))
                     .on_hover_text("Width");
-                ui.color_edit_button_srgba(&mut self.stroke.color);
+                ui.color_edit_button_srgb(&mut [self.stroke.color.r(), self.stroke.color.g(), self.stroke.color.b()]); // Magheggio per ignorare la trasparenza
                 ui.label("Stroke");
 
                 // stroke preview:
@@ -70,6 +73,69 @@ impl Painting {
             if ui.button("Clear Painting").clicked() {
                 self.lines.clear();
             }
+
+            ui.separator();
+
+            // println!("Last actions: {:?}", self.last_actions);
+            // println!("Lines: {:?}", self.lines);
+
+            if self.lines.is_empty() {
+                self.lines.push(vec![]);
+            }
+
+            // UNDO BUTTON
+            if self.lines[0].is_empty() {
+                if ui.add_enabled(false, egui::Button::new("Undo")).on_hover_text("Can't go back anymore!").clicked() {
+                    unreachable!();
+                }
+            } else if self.lines.len() > 1 {
+                // Lines will ALWAYS contain an empty vector, which is placed at the end of the array.
+                if ui.button("Undo").clicked() {
+                    // println!("Undo button pressed");
+                    // println!("(before) Lines: {:?}", self.lines);
+                    // print!( "(before) Last actions: {:?}", self.last_actions);
+                    
+                    // Quick and dirty :clown:
+                    self.lines.pop();
+                    self.last_actions.pop();
+
+                    self.last_actions.push(self.lines.pop().unwrap());
+
+                    self.lines.push(vec![]);
+                    self.last_actions.push(vec![]);
+
+                    // println!("(after) Lines: {:?}", self.lines);
+                    // println!( "(after) Last actions: {:?}", self.last_actions);
+                }
+            }
+            
+            ui.separator();
+
+            if self.last_actions[0].is_empty() {
+                if ui.add_enabled(false, egui::Button::new("Redo")).on_hover_text("Can't go forward").clicked() {
+                    unreachable!();
+                }
+            } else if self.last_actions.len() > 1 {
+                // Last_actions will ALWAYS contain an empty vector, which is placed at the end of the array.
+                if ui.button("Redo").clicked() {
+                    // println!("Undo button pressed");
+                    // println!("(before) Lines: {:?}", self.lines);
+                    // print!( "(before) Last actions: {:?}", self.last_actions);
+                    
+                    // Quick and dirty :clown:
+                    self.lines.pop();
+                    self.last_actions.pop();
+
+                    self.lines.push(self.last_actions.pop().unwrap());
+
+                    self.lines.push(vec![]);
+                    self.last_actions.push(vec![]);
+
+                    // println!("(after) Lines: {:?}", self.lines);
+                    // print!( "(after) Last actions: {:?}", self.last_actions);
+                }
+            }
+            
 
         })
         .response
@@ -160,6 +226,12 @@ impl Painting {
                 // *couple_points.add(egui::Pos2::new(self.stroke.width/2., self.stroke.width/2.));
 
                 for offset in 0..=self.stroke.width as u8 {
+
+                    // Domanda: Perché è stato fatto così?
+                    // Risposta: Egui può disegnare le linee con un certo spessore perché per ogni coppia di punti disegna un rettangolo con uno spessore.
+                    // Ho cercato di fare lo stesso con imageproc, ma non si può fare perché la linea non ha un argomento per lo spessore. Ho cercato di farlo
+                    // manualmente traslando di vari offset, ma uscivano sempre dei buchi bianchi. Ho cercato di riempirli, e attualmente questo è stato il risultato migliore
+                    // Non posso perderci altro tempo. La libreria è troppo acerba.
                     
                     let mut start = self.segment_coordinates(&couple_points[0], (offset, offset));
                     let mut end = self.segment_coordinates(&couple_points[1], (offset, offset));

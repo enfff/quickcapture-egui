@@ -25,7 +25,7 @@ fn main() -> eframe::Result<()> {
 
     let native_options = eframe::NativeOptions {
         min_window_size: Some([300.0, 200.0].into()),
-        initial_window_size: Some([300.0, 200.0].into()),
+        initial_window_size: Some([640.0, 400.0].into()),
         transparent: true,
         ..Default::default()
     };
