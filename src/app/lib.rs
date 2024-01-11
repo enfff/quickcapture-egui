@@ -3,12 +3,9 @@
 mod app;
 pub use app::QuickCaptureApp;
 
-// pub use screenshot_utils::{ScreenshotMetadata, ScreenshotType};
-
 mod screenshot_utils;
 mod save_utils;
 mod image_utils;
 mod painting_utils;
 mod pathlib;
 mod save_view;
-mod pathlib;

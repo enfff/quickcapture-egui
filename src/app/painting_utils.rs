@@ -1,8 +1,6 @@
 // Inspired from
 // https://github.com/emilk/egui/blob/master/crates/egui_demo_lib/src/demo/painting.rs
 
-// Should
-
 use std::{ops::Add, vec};
 
 use image::RgbaImage;
@@ -91,10 +89,6 @@ impl Painting {
             } else if self.lines.len() > 1 {
                 // Lines will ALWAYS contain an empty vector, which is placed at the end of the array.
                 if ui.button("Undo").clicked() {
-                    // println!("Undo button pressed");
-                    // println!("(before) Lines: {:?}", self.lines);
-                    // print!( "(before) Last actions: {:?}", self.last_actions);
-                    
                     // Quick and dirty :clown:
                     self.lines.pop();
                     self.last_actions.pop();
@@ -118,10 +112,6 @@ impl Painting {
             } else if self.last_actions.len() > 1 {
                 // Last_actions will ALWAYS contain an empty vector, which is placed at the end of the array.
                 if ui.button("Redo").clicked() {
-                    // println!("Undo button pressed");
-                    // println!("(before) Lines: {:?}", self.lines);
-                    // print!( "(before) Last actions: {:?}", self.last_actions);
-                    
                     // Quick and dirty :clown:
                     self.lines.pop();
                     self.last_actions.pop();
@@ -141,7 +131,6 @@ impl Painting {
         .response
     }
 
-    // Trovare un nome migliore per where_i_am_painting
     pub fn ui_content(&mut self, ui: &mut egui::Ui) -> egui::Response {
         // Ritorna una egui::Response, cioè l'esito dell'aggiunta di un widget nella ui. Per farlo,
         // prima crea una UI che mostra lo screenshot come sfondo di un oggetto painter, cioè un
@@ -298,6 +287,8 @@ impl Painting {
     fn painting_size(&mut self, ui_available_size: egui::Vec2) -> egui::Vec2 {
         // Definisce la grandezza dell'immagine su cui stai disegnando. Prende sempre la grandezza minore
         // tra la grandezza della UI e quella dello screenshot, mantendo intatto l'aspect ratio.
+
+        // TODO: caso in cui image è TALL
 
         let mut painting_size =  egui::Vec2::ZERO;
         if ui_available_size.x < ui_available_size.y && self.aspect_ratio >= 1.{

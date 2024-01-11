@@ -1,13 +1,16 @@
 # QuickCapture
 A multi platform screenshot utility written in Rust
 
-## Choses à faire
-- [x] Fare screenshot schermo intero
-- [ ] Fare screenshot parziale
-- [x] UI responsive 
-- [ ] Disegnare su screenshot
-- [x] Salvataggio immagine
-- [ ] 
+## Features
+- [x] Screenshot intero
+- [ ] Screenshot parziale
+- [x] Screenshot multischermo intero
+- [ ] Screenshot multischermo parziale
+- [x] UI responsive
+- [x] Disegnare su screenshot
+- [x] Salvataggio immagine (png)
+- [ ] Salvataggio immagine (jpeg)
+- [ ] Salvataggio immagine (gif)
 
 ## Docs
 [Egui Docs](https://docs.rs/egui/latest/egui/)

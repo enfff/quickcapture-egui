@@ -2,8 +2,6 @@ use image::ImageBuffer;
 // use std::sync::mpsc::Sender;
 use crate::app::ImgFormats;
 use std::path::PathBuf;
-use std::sync::mpsc;
-use std::thread;
 use chrono::{DateTime, Local};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,11 +35,6 @@ pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Ve
     pathname.push_str(&filename);
     pathname.push_str(".png");
     println!("Saving image to {}", pathname);
-
-    // thread::spawn(move || {
-    //     image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
-    //     // image::save_buffer(path,  &picture.as_raw().as_slice(), 1920, 1080, image::ColorType::Rgba8); // for quick testing
-    // });
 
     image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
 }

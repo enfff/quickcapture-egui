@@ -67,8 +67,6 @@ impl QuickCaptureApp {
         egui::CentralPanel::default().show(
             ctx,
             |ui| {
-                // The central panel the region left after adding TopPanel's and SidePanel's
-
                 // Some emojis can be used as icons!
                 // https://docs.rs/egui/0.24.1/egui/special_emojis/index.html
                 // https://www.egui.rs/#demo (Font Book)
@@ -241,7 +239,6 @@ impl QuickCaptureApp {
             pathlib::ui(ui, &mut self.save_path);
             if ui.button("Save").clicked() {
                 println!("Save button pressed");
-                // let output_image = self.painting.as_mut().unwrap().generate_rgba_image();
 
                 save_utils::save_image(
                     &self.save_path,
