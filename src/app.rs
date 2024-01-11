@@ -85,6 +85,25 @@ impl QuickCaptureApp {
                             println!("Save button pressed");
                             self.view = Views::Save;
                         }
+
+                        ui.separator();
+                        if ui.small_button("Resize").clicked() {
+                            println!("Resize button pressed");
+
+                            let new_size = (400, 400);
+                            let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
+                            
+                            let tmp = image::imageops::crop(
+                                tornaconti,
+                                0,
+                                0,
+                                new_size.0,
+                                new_size.1,
+                            );
+
+                            self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
+                            self.painting = None;
+                        }
                     }
 
                     ui.separator();
