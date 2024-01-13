@@ -28,12 +28,22 @@ impl SavePath {
 }
 
 pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Vec<u8>>){
-    // Do something
+    // Questa funzione in base al path selezionato e al nome file, salva l'immagine
+    // L'immagine salvata è gestita correttamente da image::save_buffer che salva correttamente nel formato desiderato
+    // Ovviamente si presume che il path sia valido e che l'estensione del file sia valida
     let mut pathname = save_path.path.to_string_lossy().to_string().to_owned();
     pathname.push_str("/");
     let filename = save_path.name.to_owned();
     pathname.push_str(&filename);
-    pathname.push_str(".png");
+    if save_path.format == ImgFormats::PNG{
+        pathname.push_str(".png");
+    }
+    else if save_path.format == ImgFormats::JPEG{
+        pathname.push_str(".jpeg");
+    }
+    else if save_path.format == ImgFormats::GIF{
+        pathname.push_str(".gif");
+    }
     println!("Saving image to {}", pathname);
 
     image::save_buffer(pathname,  &picture.as_raw().as_slice(), picture.width(), picture.height(), image::ColorType::Rgba8).unwrap();
