@@ -103,6 +103,7 @@ pub fn take_screenshot(_screenshot_type: Option<ScreenshotType>) -> Option<image
 
     }
     else if _screenshot_type == Some(ScreenshotType::PartialScreen){
+
         return None;
     }
     return None;

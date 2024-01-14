@@ -1,3 +1,4 @@
+use egui::Button;
 use image::{ImageBuffer, RgbaImage};
 use std::sync::mpsc;
 use std::{thread, time};
@@ -9,6 +10,9 @@ mod save_utils;
 mod screenshot_utils;
 
 use crate::app::save_utils::SavePath;
+
+use self::save_utils::check_filename;
+
 
 pub enum Views {
     Home,
@@ -244,7 +248,8 @@ impl QuickCaptureApp {
             // println!("settings_view");
             ui.label("Save view");
             pathlib::ui(ui, &mut self.save_path);
-            if ui.button("Save").clicked() {
+            let save_button = ui.add_enabled(check_filename(&self.save_path.name), Button::new("Save"));
+            if save_button.clicked() {
                 println!("Save button pressed");
                 save_utils::save_image(
                     &self.save_path,
@@ -252,6 +257,7 @@ impl QuickCaptureApp {
                 );
                 self.view = Views::Home;
             };
+            
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
