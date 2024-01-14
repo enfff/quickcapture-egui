@@ -2,3 +2,4 @@
 /dist
 .vscode
 *.png
+.DS_Store

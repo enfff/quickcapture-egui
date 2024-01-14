@@ -49,7 +49,10 @@ impl Default for QuickCaptureApp {
             painting: None,
             painted_screenshot: None,
             took_new_screenshot: false,
-            save_path: SavePath::new(std::env::current_dir().unwrap().join("target"), ImgFormats::PNG),         // Salva in <app_directory>/target/
+            save_path: SavePath::new(
+                std::env::current_dir().unwrap().join("target"),
+                ImgFormats::PNG,
+            ), // Salva in <app_directory>/target/
         }
     }
 }
@@ -169,15 +172,19 @@ impl QuickCaptureApp {
 
             // Take the screenshot and wait until it's done
             thread::spawn(move || {
-                let screenshot_image_buffer = screenshot_utils::take_screenshot(tmp_screenshot_type);
+                let screenshot_image_buffer =
+                    screenshot_utils::take_screenshot(tmp_screenshot_type);
                 tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
             });
 
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
-            self.took_new_screenshot = true;
-            println!("took_new_screenshot is true");
-            self.save_path.name = save_utils::generate_filename();
-            println!("default filename is: {}", self.save_path.name);
+
+            if self.screenshot_image_buffer.is_some() {
+                self.took_new_screenshot = true;
+                println!("took_new_screenshot is true");
+                self.save_path.name = save_utils::generate_filename();
+                println!("default filename is: {}", self.save_path.name);
+            }
             self.view = Views::Home;
             self.screenshot_type = None;
             self.painting = None;
