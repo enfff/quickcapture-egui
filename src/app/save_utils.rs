@@ -51,6 +51,6 @@ pub fn save_image(save_path: &SavePath, picture: ImageBuffer<image::Rgba<u8>, Ve
 
 pub fn generate_filename() -> String {
     let date: DateTime<Local> = Local::now();
-    let formatted = date.format("%Y-%m-%dT%H:%M:%S");
+    let formatted = date.format("%Y-%m-%dT%H_%M_%S");
     formatted.to_string()
 }
