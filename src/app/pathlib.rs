@@ -2,10 +2,14 @@ use crate::app::ImgFormats;
 use egui::{CollapsingHeader, Color32, ComboBox, ScrollArea, Ui};
 use std::fs;
 use crate::app::save_utils::SavePath;
+use crate::app::save_utils::check_filename;
 
 pub fn ui(ui: &mut Ui, path: &mut SavePath) {
     ui.label("Name");
     let response = ui.text_edit_singleline(&mut path.name);
+    if !check_filename(&path.name){
+        ui.colored_label(Color32::LIGHT_RED, "Filename is not valid! Forbidden characters: \\ / : * ? \" < > |");
+    }
 
     if response.lost_focus() {
         println!("Name: {}", path.name);

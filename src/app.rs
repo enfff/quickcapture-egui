@@ -246,7 +246,6 @@ impl QuickCaptureApp {
             pathlib::ui(ui, &mut self.save_path);
             if ui.button("Save").clicked() {
                 println!("Save button pressed");
-
                 save_utils::save_image(
                     &self.save_path,
                     self.painting.as_mut().unwrap().generate_rgba_image(),
