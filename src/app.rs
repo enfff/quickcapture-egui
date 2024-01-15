@@ -36,7 +36,6 @@ pub struct QuickCaptureApp {
     screenshot_type: Option<ScreenshotType>,
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
-    pub took_new_screenshot: bool,
     pub save_path: SavePath,
 }
 
@@ -48,7 +47,6 @@ impl Default for QuickCaptureApp {
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None,
             painted_screenshot: None,
-            took_new_screenshot: false,
             save_path: SavePath::new(std::env::current_dir().unwrap().join("target"), ImgFormats::PNG),         // Salva in <app_directory>/target/
         }
     }
@@ -77,7 +75,7 @@ impl QuickCaptureApp {
                         self.view = Views::Capture;
                     }
 
-                    if self.screenshot_image_buffer.is_some() {
+                    if self.screenshot_image_buffer.is_some(){
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
@@ -86,24 +84,36 @@ impl QuickCaptureApp {
                             self.view = Views::Save;
                         }
 
-                        ui.separator();
-                        if ui.small_button("Resize").clicked() {
-                            println!("Resize button pressed");
+                        // ui.separator();
+                        // if ui.small_button("Resize").clicked() && self.painting.is_some() {
+                        //     println!("Resize button pressed");
 
-                            let new_size = (400, 400);
-                            let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
-                            
-                            let tmp = image::imageops::crop(
-                                tornaconti,
-                                0,
-                                0,
-                                new_size.0,
-                                new_size.1,
-                            );
+                        //     egui::Area::new("painting_resize_area")
+                        //     .fixed_pos(self.painting.as_mut().unwrap().ui_position())
+                        //     .interactable(true)
+                        //     .constrain_to(self.painting.as_mut().unwrap().ui_size())
+                        //     .show(ctx, |ui| {
 
-                            self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
-                            self.painting = None;
-                        }
+                        //         // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
+
+
+                        //         let new_size = (400, 400);
+                        //         let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
+    
+                        //         let tmp = image::imageops::crop(
+                        //             tornaconti,
+                        //             0,
+                        //             0,
+                        //             new_size.0,
+                        //             new_size.1,
+                        //         );
+    
+                        //         self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
+                        //         self.painting = None; // Forces it to redaw the painting
+
+                        //     });
+
+                        // }
                     }
 
                     ui.separator();
@@ -180,7 +190,7 @@ impl QuickCaptureApp {
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
             // quick and dirty solution, not too proud but i couldn't find any  other way around it...
-            thread::sleep(time::Duration::from_millis(150));
+            thread::sleep(time::Duration::from_millis(1500));
 
             let (tx_screenshot_buffer, rx_screenshot_buffer) =
                 mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
@@ -193,8 +203,6 @@ impl QuickCaptureApp {
             });
 
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
-            self.took_new_screenshot = true;
-            println!("took_new_screenshot is true");
             self.save_path.name = save_utils::generate_filename();
             println!("default filename is: {}", self.save_path.name);
             self.view = Views::Home;
