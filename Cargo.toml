@@ -8,8 +8,8 @@ rust-version = "1.71"
 
 [dependencies]
 
-screenshots = "0.8.4"
-# screenshots = "0.6.0" # sometimes this gives less troubles
+# screenshots = "0.8.4"
+screenshots = "0.6.0" # sometimes this gives less troubles
 
 image = { version = "0.24", default-features = false, features = ["png", "jpeg", "gif"] }
 imageproc = "0.23.0"
@@ -19,6 +19,7 @@ epaint = "0.23.0"   # egui paint module
 eframe = { version = "0.23.0", default-features = false, features = ["accesskit", "default_fonts", "glow"] }
 log = "0.4"
 chrono = "0.4.1"
+ahash = "0.8.6"
 
 # Used for images https://docs.rs/egui/latest/egui/load/index.html
 egui_extras = { version = "0.23.0", features = ["all_loaders"] }
