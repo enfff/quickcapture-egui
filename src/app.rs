@@ -1,6 +1,6 @@
 use image::{ImageBuffer, RgbaImage};
 use std::sync::mpsc;
-use std::{thread, time, path};
+use std::{thread, time};
 
 mod image_utils;
 mod painting_utils;
@@ -17,7 +17,7 @@ pub enum Views {
     Save,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum ScreenshotType {
     FullScreen,
     PartialScreen,
@@ -217,7 +217,7 @@ impl QuickCaptureApp {
 
             // Take the screenshot and wait until it's done
             thread::spawn(move || {
-                let screenshot_image_buffer = screenshot_utils::take_screenshot("png", tmp_screenshot_type);
+                let screenshot_image_buffer = screenshot_utils::take_screenshot(tmp_screenshot_type);
                 tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
             });
 
