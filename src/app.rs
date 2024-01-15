@@ -37,6 +37,7 @@ pub struct QuickCaptureApp {
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
     timer_delay: u64,
+    crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
 
 }
@@ -48,6 +49,7 @@ impl Default for QuickCaptureApp {
             screenshot_type: None,
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None,
+            crop_rectangle: None,
             painted_screenshot: None,
             save_path: SavePath::new(std::env::current_dir().unwrap().join("target"), ImgFormats::PNG),         // Salva in <app_directory>/target/
             timer_delay: 0,
@@ -87,33 +89,48 @@ impl QuickCaptureApp {
                             self.view = Views::Save;
                         }
 
+                        // Crop Rectangle
+
                         ui.separator();
-                        if ui.small_button("Resize").clicked() && self.painting.is_some() {
+                        if self.crop_rectangle.is_none() && self.painting.is_some() {
+                            // Initialize rectangle
+                            self.crop_rectangle = Some(self.painting.as_mut().unwrap().ui_size());
+                        }
+
+                        if ui.small_button("Resize").clicked() && self.crop_rectangle.is_some(){
                             println!("Resize button pressed");
 
-                            egui::Area::new("painting_resize_area")
-                            .fixed_pos(self.painting.as_mut().unwrap().ui_position())
-                            .interactable(true)
-                            .constrain_to(self.painting.as_mut().unwrap().ui_size())
-                            .show(ctx, |ui| {
+                            // egui::Area::new("painting_resize_area")
+                            // .interactable(true)
+                            // .default_pos(self.painting.as_mut().unwrap().ui_position())
+                            // .order(egui::Order::Foreground)
+                            // .movable(true)                  // La finestra si può spostare all'interno del painting
+                            // .constrain_to(self.painting.as_mut().unwrap().ui_size())
+                            // .show(ctx, |ui| {
 
-                                // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
+                            //     ctx.set_cursor_icon(egui::CursorIcon::ResizeVertical);
 
-                                let new_size = (400, 400);
-                                let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
+                            //     if let Some(p_hover) = ctx.pointer_hover_pos() {
+                            //         ctx.set_cursor_icon(egui::CursorIcon::ResizeColumn);
+                            //     }
+
+                            //     // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
+
+                            //     let new_size = (400, 400);
+                            //     let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
     
-                                let tmp = image::imageops::crop(
-                                    tornaconti,
-                                    0,
-                                    0,
-                                    new_size.0,
-                                    new_size.1,
-                                );
+                            //     let tmp = image::imageops::crop(
+                            //         tornaconti,
+                            //         0,
+                            //         0,
+                            //         new_size.0,
+                            //         new_size.1,
+                            //     );
     
-                                self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
-                                self.painting = None; // Forces it to redaw the painting
+                            //     self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
+                            //     self.painting = None; // Forces it to redaw the painting
 
-                            });
+                            // });
 
                     }
                     }

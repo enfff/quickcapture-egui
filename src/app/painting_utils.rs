@@ -16,6 +16,8 @@ pub struct Painting {
     aspect_ratio: f32,
     screenshot_image_buffer: Option<RgbaImage>,
     last_actions: Vec<Vec<egui::Pos2>>,                 // Used to go back in time!
+    ui_size: egui::Rect,
+    ui_position: egui::Pos2,
 }
 
 impl Default for Painting {
@@ -23,12 +25,14 @@ impl Default for Painting {
         Self {
             // lines: Default::default(),
             lines: vec![vec![]],
-            stroke: egui::Stroke::new(1.0, egui::Color32::from_rgb(18, 160, 215)),
+            stroke: egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(18, 160, 215, 255)),
             // https://teamcolorcodes.com/napoli-color-codes/
             texture: None,
             screenshot_image_buffer: None,
             aspect_ratio: 1.,
             last_actions: vec![vec![]],
+            ui_size: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::ZERO),
+            ui_position: egui::Pos2::ZERO,
         }
     }
 }
@@ -49,14 +53,13 @@ impl Painting {
         }
 
         ui.horizontal(|ui| {
-            // egui::stroke_ui(ui, &mut self.stroke, "Stroke");
-
-            // let epaint::Stroke { width, color } = self.stroke;
-
+            
+            // Color and stroke buttons
             ui.horizontal(|ui| {
                 ui.add(DragValue::new(&mut self.stroke.width).speed(1).clamp_range(0..=12))
                     .on_hover_text("Width");
-                ui.color_edit_button_srgb(&mut [self.stroke.color.r(), self.stroke.color.g(), self.stroke.color.b()]); // Magheggio per ignorare la trasparenza
+                ui.color_edit_button_srgba(&mut self.stroke.color);
+                // ui.color_edit_button_srgb(&mut [self.stroke.color.r(), self.stroke.color.g(), self.stroke.color.b()]); // Magheggio per ignorare la trasparenza
                 ui.label("Stroke");
 
                 // stroke preview:
@@ -69,6 +72,7 @@ impl Painting {
             ui.separator();
 
             if ui.button("Clear Painting").clicked() {
+                self.last_actions = self.lines.clone();
                 self.lines.clear();
             }
 
@@ -105,6 +109,7 @@ impl Painting {
             
             ui.separator();
 
+            // REDO BUTTON
             if self.last_actions[0].is_empty() {
                 if ui.add_enabled(false, egui::Button::new("Redo")).on_hover_text("Can't go forward").clicked() {
                     unreachable!();
@@ -126,6 +131,9 @@ impl Painting {
                 }
             }
             
+            if ui.button("Resize").clicked(){
+                
+            };
 
         })
         .response
@@ -153,6 +161,8 @@ impl Painting {
 
         
         let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
+        self.ui_size = response.rect;
+        self.ui_position = response.rect.min;
 
         // Shows the image we're drawing on
         painter.add(egui::Shape::image(
@@ -235,6 +245,7 @@ impl Painting {
                     end = self.segment_coordinates(&couple_points[1], (offset, 0));
                     imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
                     // imageproc::drawing::draw_filled_rect_mut(output_image.as_mut().unwrap(), start, end);
+
                 }
             }
         }
@@ -243,7 +254,20 @@ impl Painting {
         return output_image.unwrap().clone();
     }
 
+    pub fn ui_size(&mut self) -> egui::Rect{
+        // Ritorna la grandezza della UI, usata per il cropping
+        return self.ui_size
+    }
 
+    // pub fn ui_size_vec2(&mut self) -> egui::Vec2{
+    //     // Ritorna la grandezza della UI, usata per il cropping
+        
+    // }
+
+    pub fn ui_position(&mut self) -> egui::Pos2{
+        // Ritorna la posizione della UI, usata per il cropping
+        return self.ui_position
+    }
 
     fn segment_coordinates(&mut self, point: &egui::Pos2, offset: (u8, u8)) -> (f32, f32){
         // Trasforma le coordinate di un punto p che è stato normalizzato con proporzioni quadrate, in coordinate per l'immagine

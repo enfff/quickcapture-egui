@@ -11,6 +11,7 @@ A multi platform screenshot utility written in Rust
 - [x] Salvataggio immagine (png)
 - [ ] Salvataggio immagine (jpeg)
 - [ ] Salvataggio immagine (gif)
+- [x] Delay timer
 
 ## Docs
 [Egui Docs](https://docs.rs/egui/latest/egui/)
