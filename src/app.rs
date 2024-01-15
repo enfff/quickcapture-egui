@@ -36,7 +36,9 @@ pub struct QuickCaptureApp {
     screenshot_type: Option<ScreenshotType>,
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
+    timer_delay: u64,
     pub save_path: SavePath,
+
 }
 
 impl Default for QuickCaptureApp {
@@ -48,6 +50,7 @@ impl Default for QuickCaptureApp {
             painting: None,
             painted_screenshot: None,
             save_path: SavePath::new(std::env::current_dir().unwrap().join("target"), ImgFormats::PNG),         // Salva in <app_directory>/target/
+            timer_delay: 0,
         }
     }
 }
@@ -84,36 +87,35 @@ impl QuickCaptureApp {
                             self.view = Views::Save;
                         }
 
-                        // ui.separator();
-                        // if ui.small_button("Resize").clicked() && self.painting.is_some() {
-                        //     println!("Resize button pressed");
+                        ui.separator();
+                        if ui.small_button("Resize").clicked() && self.painting.is_some() {
+                            println!("Resize button pressed");
 
-                        //     egui::Area::new("painting_resize_area")
-                        //     .fixed_pos(self.painting.as_mut().unwrap().ui_position())
-                        //     .interactable(true)
-                        //     .constrain_to(self.painting.as_mut().unwrap().ui_size())
-                        //     .show(ctx, |ui| {
+                            egui::Area::new("painting_resize_area")
+                            .fixed_pos(self.painting.as_mut().unwrap().ui_position())
+                            .interactable(true)
+                            .constrain_to(self.painting.as_mut().unwrap().ui_size())
+                            .show(ctx, |ui| {
 
-                        //         // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
+                                // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
 
-
-                        //         let new_size = (400, 400);
-                        //         let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
+                                let new_size = (400, 400);
+                                let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
     
-                        //         let tmp = image::imageops::crop(
-                        //             tornaconti,
-                        //             0,
-                        //             0,
-                        //             new_size.0,
-                        //             new_size.1,
-                        //         );
+                                let tmp = image::imageops::crop(
+                                    tornaconti,
+                                    0,
+                                    0,
+                                    new_size.0,
+                                    new_size.1,
+                                );
     
-                        //         self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
-                        //         self.painting = None; // Forces it to redaw the painting
+                                self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
+                                self.painting = None; // Forces it to redaw the painting
 
-                        //     });
+                            });
 
-                        // }
+                    }
                     }
 
                     ui.separator();
@@ -190,7 +192,7 @@ impl QuickCaptureApp {
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
             // quick and dirty solution, not too proud but i couldn't find any  other way around it...
-            thread::sleep(time::Duration::from_millis(1500));
+            thread::sleep(time::Duration::from_millis(&self.timer_delay + 150)); // 150 always needed to compensate EGUI's lag
 
             let (tx_screenshot_buffer, rx_screenshot_buffer) =
                 mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
@@ -227,6 +229,11 @@ impl QuickCaptureApp {
                     // self.id = Some(ui.layer_id());
                     ui.horizontal(|ui| {
                         ui.horizontal(|ui| {
+
+                            if ui.button("◀").clicked() {
+                                self.view = Views::Home;
+                            }
+
                             if ui.button("⛶").clicked() {
                                 self.screenshot_type = Some(ScreenshotType::PartialScreen);
                                 println!("PartialScreen button pressed");
@@ -239,11 +246,6 @@ impl QuickCaptureApp {
                             }
                             ui.separator();
 
-                            if ui.button("◀").clicked() {
-                                // restore_dim(&None, _frame, Some(Views::Home));
-                                self.view = Views::Home;
-                            }
-
                             if self.screenshot_type.is_some() {
                                 // L'utente ha scelto che screenshot da fare
                                 println!("screenshot_type is some");
@@ -253,6 +255,9 @@ impl QuickCaptureApp {
                                 ui.set_visible(false);
                                 ctx.request_repaint();
                             }
+
+                            ui.add(egui::DragValue::new(&mut self.timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
+
                         });
                     });
                 });
