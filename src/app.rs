@@ -1,3 +1,4 @@
+use eframe::glow::MAX_FRAGMENT_ATOMIC_COUNTERS;
 use egui::*;
 use image::RgbaImage;
 use std::sync::mpsc;
@@ -177,8 +178,10 @@ impl QuickCaptureApp {
             _frame.set_centered();
             _frame.set_visible(false);
             ctx.request_repaint();
-            // quick and dirty solution, not too proud but i couldn't find any  other way around it...
-            thread::sleep(time::Duration::from_millis(150));
+
+            // // quick and dirty solution, not too proud but i couldn't find any  other way around it...
+            // thread::sleep(time::Duration::from_millis(2000));
+
             let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
             let tmp_screenshot_type = self.screenshot_type.clone();
             let ctx1 = ctx.clone();

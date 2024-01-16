@@ -2,6 +2,7 @@ use super::ScreenshotType;
 use crate::app;
 use display_info::DisplayInfo;
 use egui::*;
+use std::{time, thread};
 
 #[derive(Clone)]
 pub struct ScreenshotView {
@@ -118,7 +119,9 @@ impl ScreenshotView {
                 }
                 if _type.is_some() {
                     ui.set_visible(false);
+                    _frame.set_visible(false);
                     ctx.request_repaint();
+                    println!("hidden")
                 }
             }
         });
@@ -154,7 +157,7 @@ impl ScreenshotView {
                             ctx.request_repaint();
                         }
 
-                        let mut _timer_delay = self.timer_delay + 150;
+                        let mut _timer_delay = self.timer_delay;
 
                         ui.add(egui::DragValue::new(&mut _timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
                     });
