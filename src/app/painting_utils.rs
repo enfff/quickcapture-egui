@@ -16,6 +16,15 @@ pub struct Painting {
     aspect_ratio: f32,
     screenshot_image_buffer: Option<RgbaImage>,
     last_actions: Vec<Vec<egui::Pos2>>,                 // Used to go back in time!
+    ui_size: egui::Rect,
+    ui_position: egui::Pos2,
+    selected_shape: DrawingShape,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum DrawingShape {
+    Line,
+    StraightLine,
 }
 
 impl Default for Painting {
@@ -23,12 +32,15 @@ impl Default for Painting {
         Self {
             // lines: Default::default(),
             lines: vec![vec![]],
-            stroke: egui::Stroke::new(1.0, egui::Color32::from_rgb(18, 160, 215)),
+            stroke: egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(18, 160, 215, 255)),
             // https://teamcolorcodes.com/napoli-color-codes/
             texture: None,
             screenshot_image_buffer: None,
             aspect_ratio: 1.,
             last_actions: vec![vec![]],
+            ui_size: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::ZERO),
+            ui_position: egui::Pos2::ZERO,
+            selected_shape: DrawingShape::Line,
         }
     }
 }
@@ -49,33 +61,46 @@ impl Painting {
         }
 
         ui.horizontal(|ui| {
-            // egui::stroke_ui(ui, &mut self.stroke, "Stroke");
-
-            // let epaint::Stroke { width, color } = self.stroke;
-
+            
+            // Color and stroke buttons
             ui.horizontal(|ui| {
                 ui.add(DragValue::new(&mut self.stroke.width).speed(1).clamp_range(0..=12))
                     .on_hover_text("Width");
-                ui.color_edit_button_srgb(&mut [self.stroke.color.r(), self.stroke.color.g(), self.stroke.color.b()]); // Magheggio per ignorare la trasparenza
+                ui.color_edit_button_srgba(&mut self.stroke.color);
+                // ui.color_edit_button_srgb(&mut [self.stroke.color.r(), self.stroke.color.g(), self.stroke.color.b()]); // Magheggio per ignorare la trasparenza
                 ui.label("Stroke");
 
-                // stroke preview:
-                let (_id, stroke_rect) = ui.allocate_space(ui.spacing().interact_size);
-                let left = stroke_rect.left_center();
-                let right = stroke_rect.right_center();
-                ui.painter().line_segment([left, right], (*&mut self.stroke.width, *&mut self.stroke.color));
+                egui::ComboBox::from_label("Shape:")
+                    .selected_text(format!("{:?}", self.selected_shape))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.selected_shape, DrawingShape::Line, "Line");
+                        ui.selectable_value(&mut self.selected_shape, DrawingShape::StraightLine, "Straight line");
+                    });
+
+                match self.selected_shape {
+                    DrawingShape::Line => {
+                        // stroke preview:
+                        let (_id, stroke_rect) = ui.allocate_space(ui.spacing().interact_size);
+                        let left = stroke_rect.left_center();
+                        let right = stroke_rect.right_center();
+                        ui.painter().line_segment([left, right], (*&mut self.stroke.width, *&mut self.stroke.color));
+                    },
+                    DrawingShape::StraightLine => {
+                        ui.label("StraightLine");
+                        let (_id, stroke_rect) = ui.allocate_space(ui.spacing().interact_size);
+                        ui.painter().rect_stroke(stroke_rect, egui::Rounding::none(), *&mut self.stroke);
+                    },
+                }
             });
             
             ui.separator();
 
             if ui.button("Clear Painting").clicked() {
+                self.last_actions = self.lines.clone();
                 self.lines.clear();
             }
 
             ui.separator();
-
-            // println!("Last actions: {:?}", self.last_actions);
-            // println!("Lines: {:?}", self.lines);
 
             if self.lines.is_empty() {
                 self.lines.push(vec![]);
@@ -105,6 +130,7 @@ impl Painting {
             
             ui.separator();
 
+            // REDO BUTTON
             if self.last_actions[0].is_empty() {
                 if ui.add_enabled(false, egui::Button::new("Redo")).on_hover_text("Can't go forward").clicked() {
                     unreachable!();
@@ -120,11 +146,10 @@ impl Painting {
 
                     self.lines.push(vec![]);
                     self.last_actions.push(vec![]);
-
-                    // println!("(after) Lines: {:?}", self.lines);
-                    // print!( "(after) Last actions: {:?}", self.last_actions);
                 }
             }
+
+            ui.separator();
             
 
         })
@@ -148,16 +173,16 @@ impl Painting {
     
         // Alloca un oggetto Painter che disegna soltanto in un rettangolo di dimensione painting_size
         
-        // REDO - Funziona ma potrebbe andare meglio
         // Biggest size possible for the painting by keeping the ar intact
-
         
         let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
+        self.ui_size = response.rect;
+        self.ui_position = response.rect.min;
 
         // Shows the image we're drawing on
         painter.add(egui::Shape::image(
             self.texture.as_ref().unwrap().id(),
-            egui::Rect::from_min_size(response.rect.min, painting_size.clone()),                          // Rectangle containing the image
+            egui::Rect::from_min_size(response.rect.min, painting_size.clone()),                          // StraightLine containing the image
             egui::Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1., 1.)),         // uv should normally be Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)) unless you want to crop or flip the image. --> no clue
             egui::Color32::WHITE)
         );
@@ -173,19 +198,66 @@ impl Painting {
             self.lines.push(vec![]);
         }
 
-        let current_line = self.lines.last_mut().unwrap();
+        match self.selected_shape {
+            DrawingShape::Line => {
+                let current_line = self.lines.last_mut().unwrap();
 
-        if let Some(pointer_pos) = response.interact_pointer_pos() {
-            let canvas_pos = from_screen * pointer_pos;
+                if let Some(pointer_pos) = response.interact_pointer_pos() {
+                    let canvas_pos = from_screen * pointer_pos;
 
-            // println!("Canvas pos: {:?}", canvas_pos);
-            if current_line.last() != Some(&canvas_pos) {
-                current_line.push(canvas_pos);
-                response.mark_changed();
-            }
-        } else if !current_line.is_empty() {
-            self.lines.push(vec![]);
-            response.mark_changed();
+                    // println!("Canvas pos: {:?}", canvas_pos);
+                    if current_line.last() != Some(&canvas_pos) {
+                        current_line.push(canvas_pos);
+                        response.mark_changed();
+                    }
+                } else if !current_line.is_empty() {
+                    self.lines.push(vec![]);
+                    response.mark_changed();
+                }
+            },
+            DrawingShape::StraightLine => {
+                let current_line = self.lines.last_mut().unwrap();
+                let mut init_canvas_pos = egui::Pos2::new(-1., -1.);
+                let mut next_canvas_pos = egui::Pos2::new(-1., -1.);      // This is the rectange bottom right point as we're dragging it        
+
+                if response.clicked() {
+                    if let Some(pointer_pos) = response.interact_pointer_pos() {
+                        // La prima volta che viene premuto cattura la posizione iniziale
+                        init_canvas_pos = from_screen * pointer_pos;
+                        println!("Init canvas pos: {:?}", init_canvas_pos);
+                    }
+
+                    if let Some(pointer_pos) = response.hover_pos() {
+                        // L'utente sta spostando il mouse nell'immagine -> disegna anteprima
+                        // current_line.pop(); // Elimina ultima linea disegnata
+
+                        println!("Hover pos: {:?}", pointer_pos);
+                        
+                        if current_line.last() != Some(&next_canvas_pos){
+                            next_canvas_pos = from_screen * pointer_pos;
+                            current_line.push(next_canvas_pos);
+                            response.mark_changed();
+                        }
+                        
+                        // current_line.pop();
+                    }
+
+                    if response.clicked() {
+                        // L'utente ha rilasciato il mouse -> disegna la linea
+                        if let Some(pointer_pos) = response.interact_pointer_pos() {
+    
+                            if current_line.last() != Some(&next_canvas_pos){
+                                next_canvas_pos = from_screen * pointer_pos;
+                                current_line.push(next_canvas_pos);
+                                response.mark_changed();
+                            }
+    
+                        }
+                    }
+
+                }
+                
+            },
         }
 
         // Ridisegna le linee
@@ -212,7 +284,6 @@ impl Painting {
         // Ho dovuto clonare perché altrimenti dava problemi il borrow checker
         for line in self.lines.clone().iter() {
             for couple_points in line.windows(2) {
-                // *couple_points.add(egui::Pos2::new(self.stroke.width/2., self.stroke.width/2.));
 
                 for offset in 0..=self.stroke.width as u8 {
 
@@ -224,6 +295,7 @@ impl Painting {
                     
                     let mut start = self.segment_coordinates(&couple_points[0], (offset, offset));
                     let mut end = self.segment_coordinates(&couple_points[1], (offset, offset));
+                    
                     imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
                     // let rect = imageproc::rect::RectPosition::
 
@@ -235,6 +307,7 @@ impl Painting {
                     end = self.segment_coordinates(&couple_points[1], (offset, 0));
                     imageproc::drawing::draw_line_segment_mut(output_image.as_mut().unwrap(), start, end, image::Rgba(self.stroke.color.to_array()));
                     // imageproc::drawing::draw_filled_rect_mut(output_image.as_mut().unwrap(), start, end);
+
                 }
             }
         }
@@ -243,7 +316,20 @@ impl Painting {
         return output_image.unwrap().clone();
     }
 
+    pub fn ui_size(&mut self) -> egui::Rect{
+        // Ritorna la grandezza della UI, usata per il cropping
+        return self.ui_size
+    }
 
+    pub fn ui_size_vec2(&mut self) -> egui::Vec2{
+        // Ritorna la grandezza della UI, usata per il cropping
+        return egui::Vec2::new(self.ui_size.width(), self.ui_size.height())
+    }
+
+    pub fn ui_position(&mut self) -> egui::Pos2{
+        // Ritorna la posizione della UI, usata per il cropping
+        return self.ui_position
+    }
 
     fn segment_coordinates(&mut self, point: &egui::Pos2, offset: (u8, u8)) -> (f32, f32){
         // Trasforma le coordinate di un punto p che è stato normalizzato con proporzioni quadrate, in coordinate per l'immagine

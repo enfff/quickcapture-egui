@@ -9,6 +9,7 @@ mod pathlib;
 mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
+mod crop_lib;
 
 use crate::app::save_utils::SavePath;
 
@@ -19,6 +20,7 @@ pub enum Views {
     Settings,
     Capture,
     Save,
+    Crop
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -40,7 +42,8 @@ pub struct QuickCaptureApp {
     screenshot_type: Option<ScreenshotType>,
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
-    pub took_new_screenshot: bool,
+    timer_delay: u64,
+    crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
 }
@@ -52,12 +55,13 @@ impl Default for QuickCaptureApp {
             screenshot_type: None,
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None,
+            crop_rectangle: None,
             painted_screenshot: None,
-            took_new_screenshot: false,
             save_path: SavePath::new(
                 std::env::current_dir().unwrap().join("target"),
                 ImgFormats::PNG,
             ), // Salva in <app_directory>/target/
+            timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
         }
     }
@@ -86,7 +90,7 @@ impl QuickCaptureApp {
                         self.view = Views::Capture;
                     }
 
-                    if self.screenshot_image_buffer.is_some() {
+                    if self.screenshot_image_buffer.is_some(){
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
@@ -94,6 +98,7 @@ impl QuickCaptureApp {
                             println!("Save button pressed");
                             self.view = Views::Save;
                         }
+
                     }
 
                     ui.separator();
@@ -197,8 +202,6 @@ impl QuickCaptureApp {
             self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
 
             if self.screenshot_image_buffer.is_some() {
-                self.took_new_screenshot = true;
-                println!("took_new_screenshot is true");
                 self.save_path.name = save_utils::generate_filename();
                 println!("default filename is: {}", self.save_path.name);
             }
@@ -221,11 +224,9 @@ impl QuickCaptureApp {
     }
 }
 
-
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             // println!("settings_view");
-            ui.label("Save view");
             pathlib::ui(ui, &mut self.save_path);
             let save_button =
                 ui.add_enabled(check_filename(&self.save_path.name), Button::new("Save"));
@@ -243,5 +244,10 @@ impl QuickCaptureApp {
         });
     }
 
+    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
+        egui::CentralPanel::default().show(ctx, |ui| {
+            println!("Crop");
+        });
+    }
 }
 

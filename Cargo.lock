@@ -2219,6 +2219,7 @@ dependencies = [
  "egui 0.22.0",
  "egui_extras",
  "env_logger",
+ "epaint 0.22.0",
  "image",
  "imageproc",
  "log",

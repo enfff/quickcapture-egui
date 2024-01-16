@@ -13,6 +13,7 @@ pub struct ScreenshotView {
     pub dimension_selected: Vec2,
     pub finished_selection: bool,
     pub screen_selected: u32,
+    pub timer_delay: i32,
 }
 
 impl Default for ScreenshotView {
@@ -26,6 +27,7 @@ impl Default for ScreenshotView {
             dimension_selected: Default::default(),
             finished_selection: false,
             screen_selected: 0,
+            timer_delay: 0,
         }
     }
 }
@@ -128,27 +130,33 @@ impl ScreenshotView {
                 self.id = Some(ui.layer_id());
                 ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
+                        if ui.button("◀ Go back").clicked() {
+                            // restore_dim(&None, _frame, Some(Views::Home));
+                            *_view = app::Views::Home;
+                            println!("Go back button pressed");
+                        }
+
                         if ui.add_enabled(false, Button::new("⛶")).clicked() {
                             *_type = Some(ScreenshotType::PartialScreen);
                             println!("PartialScreen button pressed");
                         }
                         ui.separator();
 
-                        if ui.button("🖵").clicked() {
+                        if ui.button("🖵 Fullscreen").clicked() {
                             *_type = Some(ScreenshotType::FullScreen);
                             println!("FullScreen button pressed");
                         }
                         ui.separator();
 
-                        if ui.button("◀").clicked() {
-                            // restore_dim(&None, _frame, Some(Views::Home));
-                            *_view = app::Views::Home;
-                            println!("Go back button pressed");
-                        }
+
                         if _type.is_some() {
                             ui.set_visible(false);
                             ctx.request_repaint();
                         }
+
+                        let mut _timer_delay = self.timer_delay + 150;
+
+                        ui.add(egui::DragValue::new(&mut _timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
                     });
                 });
             });
