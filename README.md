@@ -6,12 +6,16 @@ A multi platform screenshot utility written in Rust
 - [ ] Screenshot parziale
 - [x] Screenshot multischermo intero
 - [ ] Screenshot multischermo parziale
+- [x] Delay timer
 - [x] UI responsive
 - [x] Disegnare su screenshot
 - [x] Salvataggio immagine (png)
 - [ ] Salvataggio immagine (jpeg)
 - [ ] Salvataggio immagine (gif)
-- [x] Delay timer
+- [ ] Sistemare UNDO/REDO
+- [ ] Salvataggio nella clipboard
+- [ ] Crop in post
+- [ ] Hotkeys
 
 ## Docs
 [Egui Docs](https://docs.rs/egui/latest/egui/)

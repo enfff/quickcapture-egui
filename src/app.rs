@@ -39,7 +39,6 @@ pub struct QuickCaptureApp {
     timer_delay: u64,
     crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
-
 }
 
 impl Default for QuickCaptureApp {
@@ -89,50 +88,6 @@ impl QuickCaptureApp {
                             self.view = Views::Save;
                         }
 
-                        // Crop Rectangle
-
-                        ui.separator();
-                        if self.crop_rectangle.is_none() && self.painting.is_some() {
-                            // Initialize rectangle
-                            self.crop_rectangle = Some(self.painting.as_mut().unwrap().ui_size());
-                        }
-
-                        if ui.small_button("Resize").clicked() && self.crop_rectangle.is_some(){
-                            println!("Resize button pressed");
-
-                            // egui::Area::new("painting_resize_area")
-                            // .interactable(true)
-                            // .default_pos(self.painting.as_mut().unwrap().ui_position())
-                            // .order(egui::Order::Foreground)
-                            // .movable(true)                  // La finestra si può spostare all'interno del painting
-                            // .constrain_to(self.painting.as_mut().unwrap().ui_size())
-                            // .show(ctx, |ui| {
-
-                            //     ctx.set_cursor_icon(egui::CursorIcon::ResizeVertical);
-
-                            //     if let Some(p_hover) = ctx.pointer_hover_pos() {
-                            //         ctx.set_cursor_icon(egui::CursorIcon::ResizeColumn);
-                            //     }
-
-                            //     // crop_selected_area = egui::Rect::from_min_size(self.painting.as_mut().unwrap().ui_position(), self.painting.as_mut().unwrap().ui_size());
-
-                            //     let new_size = (400, 400);
-                            //     let tornaconti = &mut image::DynamicImage::ImageRgba8(self.screenshot_image_buffer.clone().unwrap());
-    
-                            //     let tmp = image::imageops::crop(
-                            //         tornaconti,
-                            //         0,
-                            //         0,
-                            //         new_size.0,
-                            //         new_size.1,
-                            //     );
-    
-                            //     self.screenshot_image_buffer = Some(image::RgbaImage::from(tmp.to_image()));
-                            //     self.painting = None; // Forces it to redaw the painting
-
-                            // });
-
-                    }
                     }
 
                     ui.separator();
@@ -183,7 +138,6 @@ impl QuickCaptureApp {
     pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
-            println!("settings_view");
             ui.label("Settings view");
             if ui.button("go back").clicked() {
                 self.view = Views::Home;
@@ -202,7 +156,7 @@ impl QuickCaptureApp {
 
     pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // println!("screenshot_view");
-
+        
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
         if self.screenshot_type.is_some() {
@@ -211,8 +165,7 @@ impl QuickCaptureApp {
             // quick and dirty solution, not too proud but i couldn't find any  other way around it...
             thread::sleep(time::Duration::from_millis(&self.timer_delay + 150)); // 150 always needed to compensate EGUI's lag
 
-            let (tx_screenshot_buffer, rx_screenshot_buffer) =
-                mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
+            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel::<Option<ImageBuffer<image::Rgba<u8>, Vec<u8>>>>();
             let tmp_screenshot_type = self.screenshot_type.clone();
 
             // Take the screenshot and wait until it's done
@@ -247,17 +200,18 @@ impl QuickCaptureApp {
                     ui.horizontal(|ui| {
                         ui.horizontal(|ui| {
 
-                            if ui.button("◀").clicked() {
+                            if ui.button("Go back").clicked() {
                                 self.view = Views::Home;
                             }
+                            ui.separator();
 
-                            if ui.button("⛶").clicked() {
+                            if ui.button("⛶ Partial").clicked() {
                                 self.screenshot_type = Some(ScreenshotType::PartialScreen);
                                 println!("PartialScreen button pressed");
                             }
                             ui.separator();
 
-                            if ui.button("🖵").clicked() {
+                            if ui.button("🖵 Full").clicked() {
                                 self.screenshot_type = Some(ScreenshotType::FullScreen);
                                 println!("FullScreen button pressed");
                             }
@@ -284,7 +238,6 @@ impl QuickCaptureApp {
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             // println!("settings_view");
-            ui.label("Save view");
             pathlib::ui(ui, &mut self.save_path);
             if ui.button("Save").clicked() {
                 println!("Save button pressed");
