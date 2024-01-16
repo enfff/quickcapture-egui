@@ -145,10 +145,10 @@ impl QuickCaptureApp {
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Settings view");
-            if ui.button("go back").clicked() {
+            pathlib::ui_settings(ui, &mut self.save_path);
+            if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
-
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
@@ -237,7 +237,6 @@ impl QuickCaptureApp {
                 );
                 self.view = Views::Home;
             };
-
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
