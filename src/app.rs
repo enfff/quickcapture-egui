@@ -7,6 +7,7 @@ mod painting_utils;
 mod pathlib;
 mod save_utils;
 mod screenshot_utils;
+mod crop_lib;
 
 use crate::app::save_utils::SavePath;
 
@@ -15,6 +16,7 @@ pub enum Views {
     Settings,
     Capture,
     Save,
+    Crop
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -251,6 +253,12 @@ impl QuickCaptureApp {
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
+        });
+    }
+
+    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
+        egui::CentralPanel::default().show(ctx, |ui| {
+            println!("Crop");
         });
     }
 }

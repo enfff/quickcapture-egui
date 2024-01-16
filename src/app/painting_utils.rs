@@ -149,6 +149,9 @@ impl Painting {
                 }
             }
 
+            ui.separator();
+            
+
         })
         .response
     }
@@ -170,7 +173,6 @@ impl Painting {
     
         // Alloca un oggetto Painter che disegna soltanto in un rettangolo di dimensione painting_size
         
-        // REDO - Funziona ma potrebbe andare meglio
         // Biggest size possible for the painting by keeping the ar intact
         
         let (mut response, painter) = ui.allocate_painter(painting_size.clone(), egui::Sense::drag());
@@ -218,9 +220,6 @@ impl Painting {
                 let mut init_canvas_pos = egui::Pos2::new(-1., -1.);
                 let mut next_canvas_pos = egui::Pos2::new(-1., -1.);      // This is the rectange bottom right point as we're dragging it        
 
-
-                // let mut line = vec![];
-
                 if response.clicked() {
                     if let Some(pointer_pos) = response.interact_pointer_pos() {
                         // La prima volta che viene premuto cattura la posizione iniziale
@@ -230,7 +229,7 @@ impl Painting {
 
                     if let Some(pointer_pos) = response.hover_pos() {
                         // L'utente sta spostando il mouse nell'immagine -> disegna anteprima
-                        // Elimina ultima linea disegnata
+                        // current_line.pop(); // Elimina ultima linea disegnata
 
                         println!("Hover pos: {:?}", pointer_pos);
                         
@@ -253,40 +252,13 @@ impl Painting {
                                 response.mark_changed();
                             }
     
-                            // println!("Middle canvas pos: {:?}", middle_canvas_pos);
                         }
                     }
 
                 }
                 
-
-                // if response.drag_released() {
-                //     if let Some(pointer_pos) = response.interact_pointer_pos() {
-                //         end_canvas_pos = from_screen * pointer_pos;
-                //         println!("end canvas pos: {:?}", end_canvas_pos);
-                //     }
-                // }
-
-
             },
         }
-
-        // let current_line = self.lines.last_mut().unwrap();
-
-        // if let Some(pointer_pos) = response.interact_pointer_pos() {
-        //     let canvas_pos = from_screen * pointer_pos;
-
-        //     // println!("Canvas pos: {:?}", canvas_pos);
-        //     if current_line.last() != Some(&canvas_pos) {
-        //         current_line.push(canvas_pos);
-        //         response.mark_changed();
-        //     }
-        // } else if !current_line.is_empty() {
-        //     self.lines.push(vec![]);
-        //     response.mark_changed();
-        // }
-
-
 
         // Ridisegna le linee
         let shapes = self
