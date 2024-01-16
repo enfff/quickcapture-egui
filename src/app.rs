@@ -3,13 +3,13 @@ use image::RgbaImage;
 use std::sync::mpsc;
 use std::{thread, time};
 
+mod crop_lib;
 mod image_utils;
 mod painting_utils;
 mod pathlib;
 mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
-mod crop_lib;
 
 use crate::app::save_utils::SavePath;
 
@@ -20,7 +20,7 @@ pub enum Views {
     Settings,
     Capture,
     Save,
-    Crop
+    Crop,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -90,7 +90,7 @@ impl QuickCaptureApp {
                         self.view = Views::Capture;
                     }
 
-                    if self.screenshot_image_buffer.is_some(){
+                    if self.screenshot_image_buffer.is_some() {
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
@@ -98,7 +98,6 @@ impl QuickCaptureApp {
                             println!("Save button pressed");
                             self.view = Views::Save;
                         }
-
                     }
 
                     ui.separator();
@@ -170,13 +169,12 @@ impl QuickCaptureApp {
 
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
-        self.screenshot_view.ui(ctx, _frame, &mut self.view, &mut self.screenshot_type);
+        self.screenshot_view
+            .ui(ctx, _frame, &mut self.view, &mut self.screenshot_type);
         if self.screenshot_type.is_some() {
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
             _frame.set_window_size(vec2(640.0, 400.0));
             _frame.set_centered();
-            _frame.set_visible(false);
-            ctx.request_repaint();
             // quick and dirty solution, not too proud but i couldn't find any  other way around it...
             thread::sleep(time::Duration::from_millis(150));
             let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
@@ -220,9 +218,8 @@ impl QuickCaptureApp {
             _frame.set_visible(true);
 
             // Maschera sopra lo schermo per scegliere il tipo di screenshot
-            
+        }
     }
-}
 
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -245,10 +242,9 @@ impl QuickCaptureApp {
         });
     }
 
-    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
+    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             println!("Crop");
         });
     }
 }
-

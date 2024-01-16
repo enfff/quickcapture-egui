@@ -43,17 +43,16 @@ impl ScreenshotView {
         _view: &mut app::Views,
         _type: &mut Option<ScreenshotType>,
     ) {
-        ctx.set_cursor_icon(CursorIcon::Default);
-        if ctx.is_pointer_over_area() {
-            ctx.set_cursor_icon(CursorIcon::Crosshair);
-        }
+        ctx.set_cursor_icon(CursorIcon::Crosshair);
         let width = _frame.info().window_info.monitor_size.unwrap().x;
         let height = _frame.info().window_info.monitor_size.unwrap().y;
         _frame.set_decorations(false);
         _frame.set_window_size(vec2(width + 1., height + 1.));
         _frame.set_window_pos(pos2(0., 0.));
 
-        Area::new("screen").show(ctx, |ui| {
+        Area::new("screen")
+        .order(Order::Background)
+        .show(ctx, |ui| {
             ui.label("Screenshot");
             let rect = ui.max_rect();
             ui.painter()
@@ -131,7 +130,8 @@ impl ScreenshotView {
                 ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
                         if ui.button("◀ Go back").clicked() {
-                            // restore_dim(&None, _frame, Some(Views::Home));
+                            _frame.set_window_size(vec2(640.0, 400.0));
+                            _frame.set_centered();
                             *_view = app::Views::Home;
                             println!("Go back button pressed");
                         }
