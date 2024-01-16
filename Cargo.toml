@@ -23,6 +23,7 @@ ahash = "0.8.6"
 
 # Used for images https://docs.rs/egui/latest/egui/load/index.html
 egui_extras = { version = "0.23.0", features = ["all_loaders"] }
+display-info = "0.4.8"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
