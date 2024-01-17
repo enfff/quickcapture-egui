@@ -48,7 +48,7 @@ impl ScreenshotView {
         let height = _frame.info().window_info.monitor_size.unwrap().y;
         _frame.set_decorations(false);
         _frame.set_window_size(vec2(width + 1., height + 1.));
-        _frame.set_window_pos(pos2(0., 0.));
+        _frame.set_window_pos(Pos2::ZERO);
 
         Area::new("screen")
         .order(Order::Background)

@@ -20,7 +20,6 @@ pub enum Views {
     Settings,
     Capture,
     Save,
-    Crop,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -43,7 +42,6 @@ pub struct QuickCaptureApp {
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
     timer_delay: u64,
-    crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
 }
@@ -55,7 +53,6 @@ impl Default for QuickCaptureApp {
             screenshot_type: None,
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None,
-            crop_rectangle: None,
             painted_screenshot: None,
             save_path: SavePath::new(
                 std::env::current_dir().unwrap().join("target"),
@@ -123,7 +120,7 @@ impl QuickCaptureApp {
                                     Default::default(),
                                 ));
 
-                                // Create an istance of a Painter object
+                                // Create an instance of a Painter object
                                 self.painting = Some(painting_utils::Painting::new(
                                     self.painted_screenshot.clone(),
                                     self.screenshot_image_buffer.clone(),
@@ -136,8 +133,32 @@ impl QuickCaptureApp {
                             painting.ui_control(ui);
                             // Aggiunge un livello che ha come sfondo lo screenshot su cui sopra è possibile disegnare
                             painting.ui_content(ui);
-
-                            self.painting = Some(painting.clone());
+                            if self.screenshot_image_buffer.clone().unwrap().dimensions()
+                                != painting
+                                    .screenshot_image_buffer
+                                    .clone()
+                                    .unwrap()
+                                    .dimensions()
+                            {
+                                // Se le dimensioni dello screenshot sono cambiate, aggiorna il buffer
+                                self.screenshot_image_buffer =
+                                   painting.screenshot_image_buffer.clone();
+                                    self.painted_screenshot = Some(ui.ctx().load_texture(
+                                        "painted_screenshot",
+                                        image_utils::load_image_from_memory(
+                                            self.screenshot_image_buffer.clone().unwrap(),
+                                        ),
+                                        Default::default(),
+                                    ));
+                                    self.painting = Some(painting_utils::Painting::new_crop(
+                                        self.painted_screenshot.clone(),
+                                        self.screenshot_image_buffer.clone(),
+                                        painting.shapes.clone()
+                                    ));
+                                    ctx.request_repaint();
+                            }else{
+                                self.painting = Some(painting.clone());
+                            }
                         };
                     });
                 }
@@ -239,12 +260,6 @@ impl QuickCaptureApp {
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
-        });
-    }
-
-    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            println!("Crop");
         });
     }
 }
