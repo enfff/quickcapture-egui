@@ -37,8 +37,7 @@ impl eframe::App for QuickCaptureApp {
                 _frame.set_decorations(true);
                 self.home_view(ctx, _frame);
             },
-            Views::Capture => {
-                _frame.set_decorations(false);
+            Views::Screenshot => {
                 self.screenshot_view(ctx, _frame);
             },
             Views::Settings => {

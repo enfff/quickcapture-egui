@@ -20,6 +20,7 @@ eframe = { version = "0.22.0", default-features = false, features = ["accesskit"
 log = "0.4"
 chrono = "0.4.1"
 ahash = "0.8.6"
+global-hotkey = "0.2.3"
 
 # Used for images https://docs.rs/egui/latest/egui/load/index.html
 egui_extras = { version = "0.23.0", features = ["all_loaders"] }

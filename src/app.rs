@@ -19,7 +19,7 @@ use self::save_utils::check_filename;
 pub enum Views {
     Home,
     Settings,
-    Capture,
+    Screenshot,
     Save,
     Crop
 }
@@ -47,6 +47,7 @@ pub struct QuickCaptureApp {
     crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
+    update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
 }
 
 impl Default for QuickCaptureApp {
@@ -64,6 +65,7 @@ impl Default for QuickCaptureApp {
             ), // Salva in <app_directory>/target/
             timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
+            update_counter: 0,
         }
     }
 }
@@ -88,7 +90,7 @@ impl QuickCaptureApp {
                 ui.horizontal(|ui| {
                     if ui.small_button("📷 Take Screenshot").clicked() {
                         println!("Screenshot button pressed");
-                        self.view = Views::Capture;
+                        self.view = Views::Screenshot;
                     }
 
                     if self.screenshot_image_buffer.is_some(){
@@ -167,50 +169,66 @@ impl QuickCaptureApp {
     }
 
     pub fn screenshot_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // println!("screenshot_view");
 
-        // Prima hai scelto che screenshot fare, adesso fai lo screenshot
+        if self.screenshot_type.is_none() {
+            self.update_counter = 0;
+        } else {
+            self.update_counter += 1;
+        }
+
         // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
         self.screenshot_view.ui(ctx, _frame, &mut self.view, &mut self.screenshot_type);
+
+
         if self.screenshot_type.is_some() {
+            println!("Update counter {}", self.update_counter);
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
-            _frame.set_window_size(vec2(640.0, 400.0));
-            _frame.set_centered();
-            _frame.set_visible(false);
-            ctx.request_repaint();
 
-            // // quick and dirty solution, not too proud but i couldn't find any  other way around it...
-            // thread::sleep(time::Duration::from_millis(2000));
+            // Perché il contatore? Perché chiamare _frame.set_visible rendere trasparente la finestra soltanto al prossimo update. Se non controllassi
+            // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
+            if self.update_counter == 2 {
+                
+                thread::sleep(time::Duration::from_millis(150));
 
-            let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
-            let tmp_screenshot_type = self.screenshot_type.clone();
-            let ctx1 = ctx.clone();
-            if self.screenshot_type.clone().unwrap() == ScreenshotType::FullScreen {
-                // Take the screenshot and wait until it's done
-                thread::spawn(move || {
-                    let screenshot_image_buffer =
-                        screenshot_utils::take_screenshot(tmp_screenshot_type, None, &ctx1);
-                    tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
-                });
-            } else if self.screenshot_type.clone().unwrap() == ScreenshotType::PartialScreen {
-                //TODO
-                let grab = self.screenshot_view.clone();
-                thread::spawn(move || {
-                    let screenshot_image_buffer =
-                        screenshot_utils::take_screenshot(tmp_screenshot_type, Some(grab), &ctx1);
-                    tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
-                });
+
+                let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
+                let tmp_screenshot_type = self.screenshot_type.clone();
+                let ctx1 = ctx.clone();
+                if self.screenshot_type.clone().unwrap() == ScreenshotType::FullScreen {
+                    // Take the screenshot and wait until it's done
+                    thread::spawn(move || {
+                        let screenshot_image_buffer =
+                            screenshot_utils::take_screenshot(tmp_screenshot_type, None, &ctx1);
+                        tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
+                    });
+                } else if self.screenshot_type.clone().unwrap() == ScreenshotType::PartialScreen {
+                    //TODO\
+                    let grab = self.screenshot_view.clone();
+                    thread::spawn(move || {
+                        let screenshot_image_buffer =
+                            screenshot_utils::take_screenshot(tmp_screenshot_type, Some(grab), &ctx1);
+                        tx_screenshot_buffer.send(screenshot_image_buffer).unwrap();
+                    });
+                }
+    
+                self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
+    
+                if self.screenshot_image_buffer.is_some() {
+                    self.save_path.name = save_utils::generate_filename();
+                    println!("default filename is: {}", self.save_path.name);
+                }
+                self.view = Views::Home;
+                self.screenshot_type = None;
+                self.painting = None;
+                // _frame.set_window_size(vec2(640.0, 400.0));
+                _frame.set_window_size(egui::Vec2::new(self.screenshot_image_buffer.as_mut().unwrap().width() as f32, self.screenshot_image_buffer.as_mut().unwrap().height() as f32));
+                _frame.set_centered();
+                _frame.set_visible(true);
+                _frame.set_decorations(true); // Preparing for the next update in which we'll go back Home
             }
 
-            self.screenshot_image_buffer = rx_screenshot_buffer.recv().unwrap();
-
-            if self.screenshot_image_buffer.is_some() {
-                self.save_path.name = save_utils::generate_filename();
-                println!("default filename is: {}", self.save_path.name);
-            }
-            self.view = Views::Home;
-            self.screenshot_type = None;
-            self.painting = None;
         }
 
         // Mostra UI per generare screenshot
@@ -218,13 +236,6 @@ impl QuickCaptureApp {
         // Se l'utente non ha scelto che tipo di screenshot fare (tra FullScreen e PartialScreen)
         // Questa funzione viene chiamata ad ogni update() che può avvenire più volte in un secondo.
         // Siccome noi vogliamo che lo per chiamata di "screenshot_view", si fa un controllo con un contatore
-
-        if self.screenshot_type.is_none() {
-            _frame.set_visible(true);
-
-            // Maschera sopra lo schermo per scegliere il tipo di screenshot
-            
-    }
 }
 
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
