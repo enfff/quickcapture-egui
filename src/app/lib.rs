@@ -9,4 +9,5 @@ mod image_utils;
 mod painting_utils;
 mod pathlib;
 mod save_view;
+mod hotkeys_utils;
 mod crop_lib;

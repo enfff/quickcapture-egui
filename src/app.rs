@@ -1,4 +1,3 @@
-use eframe::glow::MAX_FRAGMENT_ATOMIC_COUNTERS;
 use egui::*;
 use image::RgbaImage;
 use std::sync::mpsc;
@@ -11,6 +10,7 @@ mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
 mod crop_lib;
+mod hotkeys_utils;
 
 use crate::app::save_utils::SavePath;
 
@@ -23,7 +23,6 @@ pub enum Views {
     Save,
     Crop
 }
-
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ScreenshotType {
     FullScreen,
@@ -48,6 +47,7 @@ pub struct QuickCaptureApp {
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
+    keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
 }
 
 impl Default for QuickCaptureApp {
@@ -66,9 +66,11 @@ impl Default for QuickCaptureApp {
             timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
             update_counter: 0,
+            keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default()
         }
     }
 }
+
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
@@ -80,6 +82,9 @@ impl QuickCaptureApp {
 
     // Views (the current view)
     pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
+            println!("{:?}", self.keyboard_shortcuts);
+        }
         egui::CentralPanel::default().show(
             ctx,
             |ui| {
@@ -89,7 +94,6 @@ impl QuickCaptureApp {
 
                 ui.horizontal(|ui| {
                     if ui.small_button("📷 Take Screenshot").clicked() {
-                        println!("Screenshot button pressed");
                         self.view = Views::Screenshot;
                     }
 
@@ -97,8 +101,7 @@ impl QuickCaptureApp {
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
-                        if ui.small_button("💾 Save").clicked() {
-                            println!("Save button pressed");
+                        if ui.small_button("💾 Save").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.save.unwrap())){
                             self.view = Views::Save;
                         }
 
@@ -106,7 +109,6 @@ impl QuickCaptureApp {
 
                     ui.separator();
                     if ui.small_button("Settings").clicked() {
-                        println!("Settings button pressed");
                         self.view = Views::Settings;
                     }
                 });
@@ -150,6 +152,10 @@ impl QuickCaptureApp {
     }
 
     pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
+            println!("{:?}", self.keyboard_shortcuts);
+        }
+        self.keyboard_shortcuts.update_keyboard_shortcut("save", KeyboardShortcut::new(Modifiers::CTRL, Key::G));
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Settings view");
@@ -157,6 +163,8 @@ impl QuickCaptureApp {
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
+
+
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
