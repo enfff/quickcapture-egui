@@ -3,18 +3,18 @@ A multi platform screenshot utility written in Rust
 
 ## Features
 - [x] Screenshot intero
-- [ ] Screenshot parziale
+- [x] Screenshot parziale
 - [x] Screenshot multischermo intero
-- [ ] Screenshot multischermo parziale
+- [x] Screenshot multischermo parziale
 - [x] Delay timer
 - [x] UI responsive
 - [x] Disegnare su screenshot
 - [x] Salvataggio immagine (png)
-- [ ] Salvataggio immagine (jpeg)
-- [ ] Salvataggio immagine (gif)
+- [x] Salvataggio immagine (jpeg)
+- [x] Salvataggio immagine (gif)
 - [ ] Sistemare UNDO/REDO
 - [ ] Salvataggio nella clipboard
-- [ ] Crop in post
+- [x] Crop in post
 - [ ] Hotkeys
 
 ## Docs
