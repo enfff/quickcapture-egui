@@ -190,7 +190,8 @@ impl QuickCaptureApp {
             // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
             if self.update_counter == 2 {
                 
-                thread::sleep(time::Duration::from_millis(150));
+                // 150 è fisso perché nascondere la maschera richiede un po' di tempo.
+                thread::sleep(time::Duration::from_millis(150 + self.screenshot_view.get_timer_delay() as u64));
 
 
                 let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();

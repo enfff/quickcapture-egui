@@ -2,7 +2,6 @@ use super::ScreenshotType;
 use crate::app;
 use display_info::DisplayInfo;
 use egui::*;
-use std::{time, thread, vec};
 
 #[derive(Clone)]
 pub struct ScreenshotView {
@@ -159,12 +158,19 @@ impl ScreenshotView {
                         }
                         ui.separator();
 
+                        
                         let mut _timer_delay = self.timer_delay;
-
                         ui.add(egui::DragValue::new(&mut _timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
+                        println!("timer_delay: {}", _timer_delay);
+                        self.timer_delay = _timer_delay;
                     });
                 });
             });
             
     }
+
+    pub fn get_timer_delay(&self) -> i32 {
+        self.timer_delay
+    }
+
 }
