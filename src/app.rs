@@ -112,7 +112,7 @@ impl QuickCaptureApp {
                 // https://www.egui.rs/#demo (Font Book)
 
                 ui.horizontal(|ui| {
-                    if ui.small_button("📷 Take Screenshot").clicked() {
+                    if ui.small_button("📷 Take Screenshot").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.take_screenshot.unwrap())){
                         self.view = Views::Screenshot;
                     }
 
@@ -124,6 +124,7 @@ impl QuickCaptureApp {
                             self.view = Views::Save;
                         }
 
+                        ui.separator();
                         if ui.small_button("🗐 Copy to Clipboard").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.copy_to_clipboard.unwrap())){
                             if let Some(clip) = self.clipboard.as_mut() {
                                 let image_buffer = self.painting.as_mut().unwrap().generate_rgba_image();
@@ -220,22 +221,35 @@ impl QuickCaptureApp {
         modal.show(|ui| {
             modal.title(ui, "Write a new shortcut");
             modal.frame(ui, |ui| {
-                modal.body(ui, "Allowed values: all digits, CTRL, ALT, SHIFT. Separate each value with a plus sign.");
-                
-                // ui.add(egui::Checkbox::new(&mut self.alt_var, "ALT"));
-                // ui.add(egui::Checkbox::new(&mut self.ctrl_var, "CTRL"));
-                // ui.add(egui::Checkbox::new(&mut self.shift_var, "SHIFT"));
+                modal.body(ui, "Allowed values: A-Z, 0-9.");
+
+                ui.separator();
 
                 ui.add(widgets::text_edit::TextEdit::singleline(&mut self.key_var).char_limit(1).hint_text("A"));
 
+                let tmp_modifier = if self.modifier == Modifiers::ALT {
+                    "ALT"
+                } else if self.modifier == Modifiers::CTRL {
+                    "CTRL"
+                } else {
+                    "SHIFT"
+                };
+
+                ui.separator();
+
                 egui::ComboBox::from_label("Select a modifier")
-                .selected_text(format!("Modifier"))
+                .selected_text(tmp_modifier)
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.modifier, Modifiers::ALT, "ALT");
                     ui.selectable_value(&mut self.modifier, Modifiers::CTRL, "CTRL");
                     ui.selectable_value(&mut self.modifier, Modifiers::SHIFT, "SHIFT");
                 });
 
+            modal.buttons(ui, |ui| {
+                // After clicking, the modal is automatically closed
+                if modal.button(ui, "close").clicked() {
+                    // Actions after closing. Non servono per ora.
+                };
 
                 if ui.small_button("💾 Save").clicked() {
                     // Genera la shortcut, dopo controlla se è vera
@@ -277,12 +291,6 @@ impl QuickCaptureApp {
                     }
                 }
             });
-
-            modal.buttons(ui, |ui| {
-                // After clicking, the modal is automatically closed
-                if modal.button(ui, "close").clicked() {
-                    // Actions after closing. Non servono per ora.
-                };
 
             }); 
         });
