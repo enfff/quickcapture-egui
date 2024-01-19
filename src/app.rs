@@ -1,5 +1,6 @@
 use egui::*;
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui_modal::Modal;
 use image::RgbaImage;
 use arboard::Clipboard;
 use std::sync::mpsc;
@@ -52,6 +53,10 @@ pub struct QuickCaptureApp {
     keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
     clipboard: Option<Clipboard>,
     toasts: Toasts,
+    new_shortcut: String,
+    which_shortcut_field: String,
+    modifier: Modifiers,
+    key_var: String,
 }
 
 impl Default for QuickCaptureApp {
@@ -73,6 +78,10 @@ impl Default for QuickCaptureApp {
             keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default(),
             clipboard: Clipboard::new().ok(),
             toasts: Toasts::new(),
+            new_shortcut: "".to_string(),
+            which_shortcut_field: "".to_string(),
+            modifier: Modifiers::CTRL,
+            key_var: "A".to_string(),
         }
     }
 }
@@ -89,6 +98,7 @@ impl QuickCaptureApp {
     // Views (the current view)
     pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
+            println!("Test shortcut pressed! Here's the other shortcuts");
             println!("{:?}", self.keyboard_shortcuts);
         }
 
@@ -125,7 +135,7 @@ impl QuickCaptureApp {
                                 };
 
                                 if clip.set_image(ar_shitty_format).is_ok() { // <- that's what copies the image to the clipboard
-                                    println!("Copied to clipboard");
+                                    // println!("Copied to clipboard");
                                     self.toasts = Toasts::new()
                                         .anchor(Align2::CENTER_BOTTOM, (0.0, -20.0)) // 10 units from the bottom right corner
                                         .direction(egui::Direction::BottomUp);
@@ -204,7 +214,79 @@ impl QuickCaptureApp {
         if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
             println!("{:?}", self.keyboard_shortcuts);
         }
-        // self.keyboard_shortcuts.update_keyboard_shortcut("save", KeyboardShortcut::new(Modifiers::CTRL, Key::G));
+        let modal = Modal::new(ctx, "Assign key modal");
+        self.toasts.show(ctx);
+
+        modal.show(|ui| {
+            modal.title(ui, "Write a new shortcut");
+            modal.frame(ui, |ui| {
+                modal.body(ui, "Allowed values: all digits, CTRL, ALT, SHIFT. Separate each value with a plus sign.");
+                
+                // ui.add(egui::Checkbox::new(&mut self.alt_var, "ALT"));
+                // ui.add(egui::Checkbox::new(&mut self.ctrl_var, "CTRL"));
+                // ui.add(egui::Checkbox::new(&mut self.shift_var, "SHIFT"));
+
+                ui.add(widgets::text_edit::TextEdit::singleline(&mut self.key_var).char_limit(1).hint_text("A"));
+
+                egui::ComboBox::from_label("Select a modifier")
+                .selected_text(format!("Modifier"))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.modifier, Modifiers::ALT, "ALT");
+                    ui.selectable_value(&mut self.modifier, Modifiers::CTRL, "CTRL");
+                    ui.selectable_value(&mut self.modifier, Modifiers::SHIFT, "SHIFT");
+                });
+
+
+                if ui.small_button("💾 Save").clicked() {
+                    // Genera la shortcut, dopo controlla se è vera
+
+                    let shortcut = KeyboardShortcut::new(self.modifier, self.keyboard_shortcuts.from_name(&self.key_var));
+
+                    if self.keyboard_shortcuts.check_if_valid(&shortcut).0 {
+                        // Shortcut valida -> rimpiazza
+                        self.keyboard_shortcuts.update_keyboard_shortcut(&self.which_shortcut_field, shortcut);
+
+                        self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -20.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: "Keyboard replaced succesfully!".into(),
+                                        kind: ToastKind::Success,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+                        
+                        modal.close();
+                        
+                    } else {
+                        // Shortcut non valida -> mostra errore
+
+                        self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -20.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: format!("Keyboard shortcut already in use by action {:?}!", self.keyboard_shortcuts.check_if_valid(&shortcut).1).into(),
+                                        kind: ToastKind::Error,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+                    }
+                }
+            });
+
+            modal.buttons(ui, |ui| {
+                // After clicking, the modal is automatically closed
+                if modal.button(ui, "close").clicked() {
+                    // Actions after closing. Non servono per ora.
+                };
+
+            }); 
+        });
+
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Settings view");
@@ -213,15 +295,18 @@ impl QuickCaptureApp {
                 self.view = Views::Home;
             };
 
-            let mut table = egui_extras::TableBuilder::new(ui)
+            pathlib::ui_settings(ui, &mut self.save_path);
+
+            ui.separator();
+
+            ui.push_id(2, |ui| {
+                let mut table = egui_extras::TableBuilder::new(ui)
             .striped(true)
             .resizable(true)
             // .cell_layout(Layout::left_to_right(egui::Align::Center))
-            .column(egui_extras::Column::auto())
-            .column(egui_extras::Column::auto())
-            // .column(egui_extras::Column::initial(100.0).range(40.0..=300.0))
-            // .column(egui_extras::Column::initial(100.0).at_least(40.0).clip(true))
-            .column(egui_extras::Column::remainder())
+            .column(egui_extras::Column::initial(150.0).clip(false).range(150.0..=300.0))
+            .column(egui_extras::Column::auto().clip(false).range(100.0..=200.0))
+            .column(egui_extras::Column::remainder().clip(false))
             .min_scrolled_height(0.0);
 
             table
@@ -235,10 +320,44 @@ impl QuickCaptureApp {
                 header.col(|ui| {
                     ui.strong("New Shortcut");
                 });
+            }).body(|mut body| {
+                body.row(30.0, |mut row| {
+                    row.col(|ui| {
+                        ui.label("Show save view");
+                        ui.label("Copy image to clipboard");
+                        ui.label("Print shortcuts debug info");
+                        ui.label("Take a screenshot");
+                    });
+                    row.col(|ui| {
+                        ui.label(self.keyboard_shortcuts.human_readable_shorcut("save"));
+                        ui.label(self.keyboard_shortcuts.human_readable_shorcut("copy_to_clipboard"));
+                        ui.label(self.keyboard_shortcuts.human_readable_shorcut("test"));
+                        ui.label(self.keyboard_shortcuts.human_readable_shorcut("take_screenshot"));
+                    });
+                    row.col(|ui| {
+                        // let mut new_shortcut = "".to_string();
+                        if ui.small_button("Edit").clicked() {
+                            self.which_shortcut_field = "save".to_string();
+                            modal.open();
+                        }
+                        if ui.small_button("Edit").clicked() {
+                            self.which_shortcut_field = "copy_to_clipboard".to_string();
+                            modal.open();
+                        }
+                        if ui.small_button("Edit").clicked() {
+                            self.which_shortcut_field = "test".to_string();
+                            modal.open();
+                        }
+                        if ui.small_button("Edit").clicked() {
+                            self.which_shortcut_field = "take_screenshot".to_string();
+                            modal.open();
+                        }
+                    });
+                });
             });
 
-
-            pathlib::ui_settings(ui, &mut self.save_path);
+            ui.separator();
+            });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
@@ -268,7 +387,7 @@ impl QuickCaptureApp {
 
 
         if self.screenshot_type.is_some() {
-            println!("Update counter {}", self.update_counter);
+            // println!("Update counter {}", self.update_counter);
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
             if self.update_counter == 2 {
@@ -300,7 +419,7 @@ impl QuickCaptureApp {
     
                 if self.screenshot_image_buffer.is_some() {
                     self.save_path.name = save_utils::generate_filename();
-                    println!("default filename is: {}", self.save_path.name);
+                    // println!("default filename is: {}", self.save_path.name);
                 }
                 self.view = Views::Home;
                 self.screenshot_type = None;

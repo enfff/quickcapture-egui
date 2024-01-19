@@ -52,7 +52,6 @@ impl ScreenshotView {
 
         if _type.is_some() {
             _frame.set_visible(false);
-            println!("visiblr: {:?}", _type);
         }
         
         _frame.set_decorations(false);
@@ -140,7 +139,7 @@ impl ScreenshotView {
                         if ui.button("◀ Go back").clicked() {
                             // restore_dim(&None, _frame, Some(Views::Home));
                             *_view = app::Views::Home;
-                            println!("Go back button pressed");
+                            // println!("Go back button pressed");
                             _frame.set_decorations(true);
                             _frame.set_visible(true);
                             _frame.set_window_size(vec2(600., 420.));
@@ -148,20 +147,20 @@ impl ScreenshotView {
 
                         if ui.add_enabled(false, Button::new("⛶")).clicked() {
                             *_type = Some(ScreenshotType::PartialScreen);
-                            println!("PartialScreen button pressed");
+                            // println!("PartialScreen button pressed");
                         }
                         ui.separator();
 
                         if ui.button("🖵 Fullscreen").clicked() {
                             *_type = Some(ScreenshotType::FullScreen);
-                            println!("FullScreen button pressed");
+                            // println!("FullScreen button pressed");
                         }
                         ui.separator();
 
                         
                         let mut _timer_delay = self.timer_delay;
                         ui.add(egui::DragValue::new(&mut _timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
-                        println!("timer_delay: {}", _timer_delay);
+                        // println!("timer_delay: {}", _timer_delay);
                         self.timer_delay = _timer_delay;
                     });
                 });

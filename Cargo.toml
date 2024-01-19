@@ -15,6 +15,7 @@ image = { version = "0.24", default-features = false, features = ["png", "jpeg",
 imageproc = "0.23.0"
 
 egui = "0.22.0"
+egui_extras = "0.22.0"
 arboard = "3.3.0"
 epaint = "0.22.0"   # egui paint module
 eframe = { version = "0.22.0", default-features = false, features = ["accesskit", "default_fonts", "glow"] }
@@ -24,10 +25,8 @@ ahash = "0.8.6"
 
 # Extra packages for notifications
 egui-toast = "0.8.1"
+egui-modal = "=0.2.4"
 
-# Used for images https://docs.rs/egui/latest/egui/load/index.html
-# egui_extras = { version = "0.23.0", features = ["all_loaders"] }
-egui_extras = "0.22.0"
 display-info = "0.4.8"
 
 # native:
