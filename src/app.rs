@@ -1,8 +1,9 @@
 use egui::*;
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use image::RgbaImage;
+use arboard::Clipboard;
 use std::sync::mpsc;
 use std::{thread, time};
-use arboard::Clipboard;
 
 mod image_utils;
 mod painting_utils;
@@ -50,6 +51,7 @@ pub struct QuickCaptureApp {
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
     keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
     clipboard: Option<Clipboard>,
+    toasts: Toasts,
 }
 
 impl Default for QuickCaptureApp {
@@ -70,6 +72,7 @@ impl Default for QuickCaptureApp {
             update_counter: 0,
             keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default(),
             clipboard: Clipboard::new().ok(),
+            toasts: Toasts::new(),
         }
     }
 }
@@ -88,6 +91,9 @@ impl QuickCaptureApp {
         if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
             println!("{:?}", self.keyboard_shortcuts);
         }
+
+        self.toasts.show(ctx);
+
         egui::CentralPanel::default().show(
             ctx,
             |ui| {
@@ -112,15 +118,39 @@ impl QuickCaptureApp {
                             if let Some(clip) = self.clipboard.as_mut() {
                                 let image_buffer = self.painting.as_mut().unwrap().generate_rgba_image();
 
-                                // &image_buffer.as_raw().as_slice()
-                                // let img = rgba.as_ref();
                                 let ar_shitty_format =  arboard::ImageData {
                                     width: image_buffer.width() as usize,
                                     height: image_buffer.height() as usize,
                                     bytes: std::borrow::Cow::from(image_buffer.to_vec()),
                                 };
-                                clip.set_image(ar_shitty_format).unwrap();
-                                // println!("Copied to clipboard");
+
+                                if clip.set_image(ar_shitty_format).is_ok() { // <- that's what copies the image to the clipboard
+                                    println!("Copied to clipboard");
+                                    self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -20.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: "Saved to clipboard!".into(),
+                                        kind: ToastKind::Success,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+
+                                } else {
+                                    self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -30.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: "Error :(".into(),
+                                        kind: ToastKind::Error,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+                                }
                             }
                         }
 
@@ -174,15 +204,41 @@ impl QuickCaptureApp {
         if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
             println!("{:?}", self.keyboard_shortcuts);
         }
-        self.keyboard_shortcuts.update_keyboard_shortcut("save", KeyboardShortcut::new(Modifiers::CTRL, Key::G));
+        // self.keyboard_shortcuts.update_keyboard_shortcut("save", KeyboardShortcut::new(Modifiers::CTRL, Key::G));
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Settings view");
-            pathlib::ui_settings(ui, &mut self.save_path);
+
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
 
+            let mut table = egui_extras::TableBuilder::new(ui)
+            .striped(true)
+            .resizable(true)
+            // .cell_layout(Layout::left_to_right(egui::Align::Center))
+            .column(egui_extras::Column::auto())
+            .column(egui_extras::Column::auto())
+            // .column(egui_extras::Column::initial(100.0).range(40.0..=300.0))
+            // .column(egui_extras::Column::initial(100.0).at_least(40.0).clip(true))
+            .column(egui_extras::Column::remainder())
+            .min_scrolled_height(0.0);
+
+            table
+            .header(20.0, |mut header| {
+                header.col(|ui| {
+                    ui.strong("Action");
+                });
+                header.col(|ui| {
+                    ui.strong("Current Shortcut");
+                });
+                header.col(|ui| {
+                    ui.strong("New Shortcut");
+                });
+            });
+
+
+            pathlib::ui_settings(ui, &mut self.save_path);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
