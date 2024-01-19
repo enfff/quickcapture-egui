@@ -263,7 +263,7 @@ impl Painting {
                     self.screenshot_image_buffer = Some(result);
                     self.painting_size(ui.available_size());
                     if self.shapes.len() > 0 {
-                        self.shapes_remap(&self.crop.clone().unwrap(), &self.original_size.clone());
+                        self.shapes_remap(&self.crop.clone().unwrap());
                         self.original_size = (self.screenshot_image_buffer.clone().unwrap().width(), self.screenshot_image_buffer.clone().unwrap().height());
                     }
                     self.active_shape = true;
@@ -532,18 +532,13 @@ impl Painting {
         return painting_size;
     }
 
-    pub fn shapes_remap(&mut self, crop: &crop_lib::Crop, original_size: &(u32, u32)) { 
-        println!("offset_x_right: {:?}", crop.offset_x_right);
-        println!("offset_x_left: {:?}", crop.offset_x_left);
-        println!("offset_y_up: {:?}", crop.offset_y_up);
-        println!("offset_y_down: {:?}", crop.offset_y_down);
+    pub fn shapes_remap(&mut self, crop: &crop_lib::Crop) { 
+        // Remaps the shapes coordinates to the new image size
         for shape in &mut self.shapes {
             let points: Vec<Pos2> = shape.points.iter_mut().map(|p| {
                 let mut point =  *p;
-                println!("before {:?}", point);
                 point.x -= crop.offset_x_left;
                 point.y -= crop.offset_y_up;
-                println!("after {:?}", point);
 
                 return point;
             }).collect();
