@@ -2,6 +2,7 @@ use egui::*;
 use image::RgbaImage;
 use std::sync::mpsc;
 use std::{thread, time};
+use arboard::Clipboard;
 
 mod image_utils;
 mod painting_utils;
@@ -48,6 +49,7 @@ pub struct QuickCaptureApp {
     screenshot_view: screenshot_view::ScreenshotView,
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
     keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
+    clipboard: Option<Clipboard>,
 }
 
 impl Default for QuickCaptureApp {
@@ -66,7 +68,8 @@ impl Default for QuickCaptureApp {
             timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
             update_counter: 0,
-            keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default()
+            keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default(),
+            clipboard: Clipboard::new().ok(),
         }
     }
 }
@@ -103,6 +106,22 @@ impl QuickCaptureApp {
                         ui.separator();
                         if ui.small_button("💾 Save").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.save.unwrap())){
                             self.view = Views::Save;
+                        }
+
+                        if ui.small_button("🗐 Copy to Clipboard").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.copy_to_clipboard.unwrap())){
+                            if let Some(clip) = self.clipboard.as_mut() {
+                                let image_buffer = self.painting.as_mut().unwrap().generate_rgba_image();
+
+                                // &image_buffer.as_raw().as_slice()
+                                // let img = rgba.as_ref();
+                                let ar_shitty_format =  arboard::ImageData {
+                                    width: image_buffer.width() as usize,
+                                    height: image_buffer.height() as usize,
+                                    bytes: std::borrow::Cow::from(image_buffer.to_vec()),
+                                };
+                                clip.set_image(ar_shitty_format).unwrap();
+                                // println!("Copied to clipboard");
+                            }
                         }
 
                     }
@@ -180,6 +199,8 @@ impl QuickCaptureApp {
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // println!("screenshot_view");
 
+        // Perché il contatore? Perché chiamare _frame.set_visible rendere trasparente la finestra soltanto al prossimo update. Se non controllassi
+        // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
         if self.screenshot_type.is_none() {
             self.update_counter = 0;
         } else {
@@ -194,13 +215,10 @@ impl QuickCaptureApp {
             println!("Update counter {}", self.update_counter);
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
-            // Perché il contatore? Perché chiamare _frame.set_visible rendere trasparente la finestra soltanto al prossimo update. Se non controllassi
-            // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
             if self.update_counter == 2 {
                 
                 // 150 è fisso perché nascondere la maschera richiede un po' di tempo.
                 thread::sleep(time::Duration::from_millis(150 + self.screenshot_view.get_timer_delay() as u64));
-
 
                 let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
                 let tmp_screenshot_type = self.screenshot_type.clone();

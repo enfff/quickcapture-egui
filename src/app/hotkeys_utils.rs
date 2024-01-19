@@ -6,6 +6,8 @@ use egui::{KeyboardShortcut, Modifiers, Key};
 // https://stackoverflow.com/questions/56500357/how-do-i-reuse-code-for-similar-yet-distinct-types-in-rust <- questo
 // Ma è troppo complicato e non ho tempo
 
+// Prossimo tentativo -> quando si chiude l'applicazione scrivi su un file json i valori delle hotkeys e quando si apre l'applicazione caricali
+
 #[derive(Debug)]
 pub struct AllKeyboardShortcuts {
     pub save: Option<KeyboardShortcut>,

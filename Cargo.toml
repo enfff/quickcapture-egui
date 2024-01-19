@@ -16,7 +16,7 @@ imageproc = "0.23.0"
 
 egui = "0.22.0"
 # egui_25 = { package = "egui", version = "0.25.0" } # Fatto esclusivamente per potere utilizzare Serealize/Deserealize per la struct KeyboardShortcuts, ma non l'ho più usato
-
+arboard = "3.3.0"
 epaint = "0.22.0"   # egui paint module
 eframe = { version = "0.22.0", default-features = false, features = ["accesskit", "default_fonts", "glow"] }
 log = "0.4"
