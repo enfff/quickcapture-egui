@@ -7,7 +7,7 @@ use egui::{Key, KeyboardShortcut, Modifiers};
 
 // Prossimo tentativo -> quando si chiude l'applicazione scrivi su un file json i valori delle hotkeys e quando si apre l'applicazione caricali
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct AllKeyboardShortcuts {
     pub save: Option<KeyboardShortcut>,
     pub copy_to_clipboard: Option<KeyboardShortcut>,
@@ -38,7 +38,7 @@ impl AllKeyboardShortcuts {
         };
     }
 
-    fn check_if_valid(&self, shortcut: &KeyboardShortcut) -> (bool, String) {
+    pub fn check_if_valid(&self, shortcut: &KeyboardShortcut) -> (bool, String) {
         // This function checks if the shortcut is valid, returns true|false and the name of the field
         // Using match gave too many issues, and so did implementing IntoIterator for AllKeyboardShortcuts.
         if shortcut.eq(self.save.as_ref().unwrap()) {
@@ -53,4 +53,79 @@ impl AllKeyboardShortcuts {
 
         return (true, "none".to_string());
     }
+
+    pub fn human_readable_shorcut(&self, field: &str) -> String {
+        // Returns the shortcut into a human readable format 
+        let shortcut = match field {
+            "save" => self.save,
+            "copy_to_clipboard" => self.copy_to_clipboard,
+            "test" => self.test,
+            "take_screenshot" => self.take_screenshot,
+            _ => panic!("Invalid field name"),
+        };
+
+        let mut readable_shortcut = "".to_string();
+
+        if shortcut.unwrap().modifiers.ctrl {
+            readable_shortcut.push_str("CTRL+"); // cmd and ctrl are the same! (i hope)
+        }
+
+        if shortcut.unwrap().modifiers.alt {
+            readable_shortcut.push_str("ALT+");
+        }
+
+        if shortcut.unwrap().modifiers.shift {
+            readable_shortcut.push_str("SHIFT+");
+        }
+
+        readable_shortcut.push_str(shortcut.unwrap().key.name());
+
+        return readable_shortcut;
+    }
+
+    pub fn from_name(self, key: &str) -> Key {
+        
+        let mut_key = key.to_ascii_uppercase();
+
+        match mut_key.as_str() {
+            "A" => Key::A,
+            "B" => Key::B,
+            "C" => Key::C,
+            "D" => Key::D,
+            "E" => Key::E,
+            "F" => Key::F,
+            "G" => Key::G,
+            "H" => Key::H,
+            "I" => Key::I,
+            "J" => Key::J,
+            "K" => Key::K,
+            "L" => Key::L,
+            "M" => Key::M,
+            "N" => Key::N,
+            "O" => Key::O,
+            "P" => Key::P,
+            "Q" => Key::Q,
+            "R" => Key::R,
+            "S" => Key::S,
+            "T" => Key::T,
+            "U" => Key::U,
+            "V" => Key::V,
+            "W" => Key::W,
+            "X" => Key::X,
+            "Y" => Key::Y,
+            "Z" => Key::Z,
+            "0" => Key::Num0,
+            "1" => Key::Num1,
+            "2" => Key::Num2,
+            "3" => Key::Num3,
+            "4" => Key::Num4,
+            "5" => Key::Num5,
+            "6" => Key::Num6,
+            "7" => Key::Num7,
+            "8" => Key::Num8,
+            "9" => Key::Num9,
+            _ => panic!("Invalid key"),
+        }
+    }
+
 }

@@ -835,6 +835,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui-modal"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "868331421dda06e5dc8e96b2be78fd01c33a8e5c99ca452369cebecbef7b6639"
+dependencies = [
+ "egui",
+]
+
+[[package]]
 name = "egui-toast"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2045,6 +2054,7 @@ dependencies = [
  "display-info",
  "eframe",
  "egui",
+ "egui-modal",
  "egui-toast",
  "egui_extras",
  "env_logger",
