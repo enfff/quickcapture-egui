@@ -46,6 +46,11 @@ impl ScreenshotView {
         ctx.set_cursor_icon(CursorIcon::Crosshair);
         let width = _frame.info().window_info.monitor_size.unwrap().x;
         let height = _frame.info().window_info.monitor_size.unwrap().y;
+
+        if _type.is_some() {
+            _frame.set_visible(false);
+        }
+        
         _frame.set_decorations(false);
         _frame.set_window_size(vec2(width + 1., height + 1.));
         _frame.set_window_pos(Pos2::ZERO);
@@ -53,8 +58,10 @@ impl ScreenshotView {
         Area::new("screen")
         .order(Order::Background)
         .show(ctx, |ui| {
-            ui.label("Screenshot");
+
+            // ui.label("Screenshot");
             let rect = ui.max_rect();
+            // let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::new(width, height));
             ui.painter()
                 .rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 30));
             let response = ui.allocate_response(rect.size(), Sense::drag());
@@ -74,7 +81,7 @@ impl ScreenshotView {
                         epaint::RectShape {
                             rounding: Rounding::none(),
                             fill: Color32::from_rgba_unmultiplied(255, 255, 255, 0),
-                            stroke: Stroke::new(2.0, Color32::WHITE),
+                            stroke: Stroke::new(1.0, Color32::WHITE),
                             rect: selected_area,
                         },
                     );
@@ -111,14 +118,12 @@ impl ScreenshotView {
                     .unwrap();
                     self.screen_selected = disp.id;
                     *_type = Some(ScreenshotType::PartialScreen);
+
                 } else {
                     println!("ups!");
                     self.started_selection = false;
                 }
-                if _type.is_some() {
-                    ui.set_visible(false);
-                    ctx.request_repaint();
-                }
+
             }
         });
 
@@ -126,6 +131,7 @@ impl ScreenshotView {
             .title_bar(false)
             .default_pos(pos2(250.0, 150.0))
             .show(ctx, |ui| {
+
                 self.id = Some(ui.layer_id());
                 ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
@@ -133,32 +139,37 @@ impl ScreenshotView {
                             _frame.set_window_size(vec2(640.0, 400.0));
                             _frame.set_centered();
                             *_view = app::Views::Home;
-                            println!("Go back button pressed");
+                            // println!("Go back button pressed");
+                            _frame.set_decorations(true);
+                            _frame.set_visible(true);
+                            _frame.set_window_size(vec2(600., 420.));
                         }
 
                         if ui.add_enabled(false, Button::new("⛶")).clicked() {
                             *_type = Some(ScreenshotType::PartialScreen);
-                            println!("PartialScreen button pressed");
+                            // println!("PartialScreen button pressed");
                         }
                         ui.separator();
 
                         if ui.button("🖵 Fullscreen").clicked() {
                             *_type = Some(ScreenshotType::FullScreen);
-                            println!("FullScreen button pressed");
+                            // println!("FullScreen button pressed");
                         }
                         ui.separator();
 
-
-                        if _type.is_some() {
-                            ui.set_visible(false);
-                            ctx.request_repaint();
-                        }
-
-                        let mut _timer_delay = self.timer_delay + 150;
-
+                        
+                        let mut _timer_delay = self.timer_delay;
                         ui.add(egui::DragValue::new(&mut _timer_delay).speed(50).max_decimals(2).clamp_range(0..=10000).prefix("Delay Timer (ms): "));
+                        // println!("timer_delay: {}", _timer_delay);
+                        self.timer_delay = _timer_delay;
                     });
                 });
             });
+            
     }
+
+    pub fn get_timer_delay(&self) -> i32 {
+        self.timer_delay
+    }
+
 }

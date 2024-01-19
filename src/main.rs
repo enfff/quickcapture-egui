@@ -29,16 +29,14 @@ impl eframe::App for QuickCaptureApp {
 
     // Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        //egui_extras::install_image_loaders(ctx); // Used to load images
-        
+
         match self.view {
             Views::Home => {
                 _frame.set_visible(true);
                 _frame.set_decorations(true);
                 self.home_view(ctx, _frame);
             },
-            Views::Capture => {
-                _frame.set_decorations(false);
+            Views::Screenshot => {
                 self.screenshot_view(ctx, _frame);
             },
             Views::Settings => {
