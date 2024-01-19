@@ -13,9 +13,9 @@ A multi platform screenshot utility written in Rust
 - [x] Salvataggio immagine (jpeg)
 - [x] Salvataggio immagine (gif)
 - [ ] Sistemare UNDO/REDO
-- [ ] Salvataggio nella clipboard
+- [x] Salvataggio nella clipboard
 - [x] Crop in post
-- [ ] Hotkeys
+- [x] Hotkeys
 
 ## Docs
 [Egui Docs](https://docs.rs/egui/latest/egui/)

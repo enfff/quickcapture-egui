@@ -1,6 +1,7 @@
-use eframe::glow::MAX_FRAGMENT_ATOMIC_COUNTERS;
 use egui::*;
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use image::RgbaImage;
+use arboard::Clipboard;
 use std::sync::mpsc;
 use std::{thread, time};
 
@@ -11,6 +12,7 @@ mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
 mod crop_lib;
+mod hotkeys_utils;
 
 use crate::app::save_utils::SavePath;
 
@@ -23,7 +25,6 @@ pub enum Views {
     Save,
     Crop
 }
-
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ScreenshotType {
     FullScreen,
@@ -48,6 +49,9 @@ pub struct QuickCaptureApp {
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
+    keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
+    clipboard: Option<Clipboard>,
+    toasts: Toasts,
 }
 
 impl Default for QuickCaptureApp {
@@ -66,9 +70,13 @@ impl Default for QuickCaptureApp {
             timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
             update_counter: 0,
+            keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default(),
+            clipboard: Clipboard::new().ok(),
+            toasts: Toasts::new(),
         }
     }
 }
+
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
@@ -80,6 +88,12 @@ impl QuickCaptureApp {
 
     // Views (the current view)
     pub fn home_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
+            println!("{:?}", self.keyboard_shortcuts);
+        }
+
+        self.toasts.show(ctx);
+
         egui::CentralPanel::default().show(
             ctx,
             |ui| {
@@ -89,7 +103,6 @@ impl QuickCaptureApp {
 
                 ui.horizontal(|ui| {
                     if ui.small_button("📷 Take Screenshot").clicked() {
-                        println!("Screenshot button pressed");
                         self.view = Views::Screenshot;
                     }
 
@@ -97,16 +110,54 @@ impl QuickCaptureApp {
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
-                        if ui.small_button("💾 Save").clicked() {
-                            println!("Save button pressed");
+                        if ui.small_button("💾 Save").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.save.unwrap())){
                             self.view = Views::Save;
+                        }
+
+                        if ui.small_button("🗐 Copy to Clipboard").clicked() || ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.copy_to_clipboard.unwrap())){
+                            if let Some(clip) = self.clipboard.as_mut() {
+                                let image_buffer = self.painting.as_mut().unwrap().generate_rgba_image();
+
+                                let ar_shitty_format =  arboard::ImageData {
+                                    width: image_buffer.width() as usize,
+                                    height: image_buffer.height() as usize,
+                                    bytes: std::borrow::Cow::from(image_buffer.to_vec()),
+                                };
+
+                                if clip.set_image(ar_shitty_format).is_ok() { // <- that's what copies the image to the clipboard
+                                    println!("Copied to clipboard");
+                                    self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -20.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: "Saved to clipboard!".into(),
+                                        kind: ToastKind::Success,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+
+                                } else {
+                                    self.toasts = Toasts::new()
+                                        .anchor(Align2::CENTER_BOTTOM, (0.0, -30.0)) // 10 units from the bottom right corner
+                                        .direction(egui::Direction::BottomUp);
+
+                                    self.toasts.add(Toast {
+                                        text: "Error :(".into(),
+                                        kind: ToastKind::Error,
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(3.0)
+                                            .show_progress(true)
+                                    });
+                                }
+                            }
                         }
 
                     }
 
                     ui.separator();
                     if ui.small_button("Settings").clicked() {
-                        println!("Settings button pressed");
                         self.view = Views::Settings;
                     }
                 });
@@ -150,13 +201,45 @@ impl QuickCaptureApp {
     }
 
     pub fn settings_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input_mut(|i| i.consume_shortcut(&self.keyboard_shortcuts.test.unwrap())) {
+            println!("{:?}", self.keyboard_shortcuts);
+        }
+        // self.keyboard_shortcuts.update_keyboard_shortcut("save", KeyboardShortcut::new(Modifiers::CTRL, Key::G));
         // Will contain the shortcuts
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Settings view");
-            pathlib::ui_settings(ui, &mut self.save_path);
+
             if ui.button("Go back").clicked() {
                 self.view = Views::Home;
             };
+
+            let mut table = egui_extras::TableBuilder::new(ui)
+            .striped(true)
+            .resizable(true)
+            // .cell_layout(Layout::left_to_right(egui::Align::Center))
+            .column(egui_extras::Column::auto())
+            .column(egui_extras::Column::auto())
+            // .column(egui_extras::Column::initial(100.0).range(40.0..=300.0))
+            // .column(egui_extras::Column::initial(100.0).at_least(40.0).clip(true))
+            .column(egui_extras::Column::remainder())
+            .min_scrolled_height(0.0);
+
+            table
+            .header(20.0, |mut header| {
+                header.col(|ui| {
+                    ui.strong("Action");
+                });
+                header.col(|ui| {
+                    ui.strong("Current Shortcut");
+                });
+                header.col(|ui| {
+                    ui.strong("New Shortcut");
+                });
+            });
+
+
+            pathlib::ui_settings(ui, &mut self.save_path);
+
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 // powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
@@ -172,6 +255,8 @@ impl QuickCaptureApp {
         // Prima hai scelto che screenshot fare, adesso fai lo screenshot
         // println!("screenshot_view");
 
+        // Perché il contatore? Perché chiamare _frame.set_visible rendere trasparente la finestra soltanto al prossimo update. Se non controllassi
+        // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
         if self.screenshot_type.is_none() {
             self.update_counter = 0;
         } else {
@@ -186,13 +271,10 @@ impl QuickCaptureApp {
             println!("Update counter {}", self.update_counter);
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
 
-            // Perché il contatore? Perché chiamare _frame.set_visible rendere trasparente la finestra soltanto al prossimo update. Se non controllassi
-            // con un contatore, rimarrebbe la maschera nello screenshot perché non è stata nascosta.
             if self.update_counter == 2 {
                 
                 // 150 è fisso perché nascondere la maschera richiede un po' di tempo.
                 thread::sleep(time::Duration::from_millis(150 + self.screenshot_view.get_timer_delay() as u64));
-
 
                 let (tx_screenshot_buffer, rx_screenshot_buffer) = mpsc::channel();
                 let tmp_screenshot_type = self.screenshot_type.clone();
