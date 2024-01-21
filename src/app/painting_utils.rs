@@ -391,10 +391,7 @@ impl Painting {
             self.crop.as_mut().unwrap().crop_img(
                 ui,
                 response.clone(),
-                Vec2::new(
-                    self.screenshot_image_buffer.clone().unwrap().width() as f32,
-                    self.screenshot_image_buffer.clone().unwrap().height() as f32,
-                ),
+                egui::Vec2::new(self.ui_size.width(), self.ui_size.height())
             );
         }
         response
