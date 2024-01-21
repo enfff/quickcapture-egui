@@ -15,8 +15,6 @@ pub fn take_screenshot(
     _grabbed_area: Option<ScreenshotView>,
     _ctx: &egui::Context,
 ) -> Option<image::RgbaImage> {
-    // TODO
-    // Virtual desktops don't count as screens
     let mut img: RgbaImage;
     let screen_images = Screen::all()
         .unwrap()

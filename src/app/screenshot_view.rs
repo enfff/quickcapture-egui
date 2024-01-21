@@ -60,8 +60,8 @@ impl ScreenshotView {
         .show(ctx, |ui| {
 
             // ui.label("Screenshot");
-            let rect = ui.max_rect();
-            // let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::new(width, height));
+            // let rect = ui.max_rect();
+            let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::new(width, height));
             ui.painter()
                 .rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 30));
             let response = ui.allocate_response(rect.size(), Sense::drag());
