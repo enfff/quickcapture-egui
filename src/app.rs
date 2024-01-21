@@ -6,10 +6,10 @@ use arboard::Clipboard;
 use std::sync::mpsc;
 use std::{thread, time};
 
-mod crop_lib;
+mod crop_utils;
 mod image_utils;
 mod painting_utils;
-mod pathlib;
+mod path_utils;
 mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
@@ -44,14 +44,12 @@ pub struct QuickCaptureApp {
     screenshot_type: Option<ScreenshotType>,
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
-    timer_delay: u64,
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
     keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts,
     clipboard: Option<Clipboard>,
     toasts: Toasts,
-    new_shortcut: String,
     which_shortcut_field: String,
     modifier: Modifiers,
     key_var: String,
@@ -69,13 +67,11 @@ impl Default for QuickCaptureApp {
                 std::env::current_dir().unwrap().join("target"),
                 ImgFormats::PNG,
             ), // Salva in <app_directory>/target/
-            timer_delay: 0,
             screenshot_view: screenshot_view::ScreenshotView::new(),
             update_counter: 0,
             keyboard_shortcuts: hotkeys_utils::AllKeyboardShortcuts::default(),
             clipboard: Clipboard::new().ok(),
             toasts: Toasts::new(),
-            new_shortcut: "".to_string(),
             which_shortcut_field: "".to_string(),
             modifier: Modifiers::CTRL,
             key_var: "A".to_string(),
@@ -221,6 +217,9 @@ impl QuickCaptureApp {
                                         self.screenshot_image_buffer.clone(),
                                         painting.shapes.clone()
                                     ));
+
+                                    _frame.set_window_size(Vec2::new((self.screenshot_image_buffer.clone().unwrap().width() as f32) / 1.5 + 50., self.screenshot_image_buffer.clone().unwrap().height() as f32 / 1.5 + 50.));
+
                                     ctx.request_repaint();
                             }else{
                                 self.painting = Some(painting.clone());
@@ -324,12 +323,12 @@ impl QuickCaptureApp {
                 self.view = Views::Home;
             };
 
-            pathlib::ui_settings(ui, &mut self.save_path);
+            path_utils::ui_settings(ui, &mut self.save_path);
 
             ui.separator();
 
             ui.push_id(2, |ui| {
-                let mut table = egui_extras::TableBuilder::new(ui)
+                let table = egui_extras::TableBuilder::new(ui)
             .striped(true)
             .resizable(true)
             // .cell_layout(Layout::left_to_right(egui::Align::Center))
@@ -475,9 +474,10 @@ impl QuickCaptureApp {
     }
 
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.toasts.show(ctx);
         egui::CentralPanel::default().show(ctx, |ui| {
             // println!("settings_view");
-            pathlib::ui(ui, &mut self.save_path);
+            path_utils::ui(ui, &mut self.save_path);
             let save_button =
                 ui.add_enabled(check_filename(&self.save_path.name), Button::new("Save"));
             if save_button.clicked() {
@@ -486,6 +486,15 @@ impl QuickCaptureApp {
                     &self.save_path,
                     self.painting.as_mut().unwrap().generate_rgba_image(),
                 );
+                
+                self.toasts.add(Toast {
+                    text: "Image saved successfully!".into(),
+                    kind: ToastKind::Success,
+                    options: ToastOptions::default()
+                    .duration_in_seconds(3.0)
+                    .show_progress(true)
+                });
+                
                 self.view = Views::Home;
             };
             if ui.button("Go back").clicked() {

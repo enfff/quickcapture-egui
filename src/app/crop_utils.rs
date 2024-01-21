@@ -1,5 +1,3 @@
-use crate::app::painting_utils::Painting;
-use crate::app;
 use egui::*;
 use egui::epaint::RectShape;
 
@@ -48,8 +46,6 @@ impl Crop {
     }
 
     pub fn crop_img(&mut self, ui: &mut Ui, response: Response, dim: Vec2){
-        let cutdim = dim.clone();
-
         self.cut_rect.min.x = response.rect.min.x + (response.rect.width() * self.offset_x_left) as f32;
         self.cut_rect.min.y = response.rect.min.y + (response.rect.height() * self.offset_y_up) as f32;
         self.cut_rect.max.x = response.rect.max.x - (response.rect.width() * self.offset_x_right) as f32;
@@ -58,8 +54,8 @@ impl Crop {
         if self.cut_rect.is_positive() {
             ui.painter().add(Shape::Rect(RectShape {
                 rect: self.cut_rect,
-                fill: Color32::from_rgba_unmultiplied(255, 255, 255, 2),
-                stroke: Stroke::new(3.0, Color32::WHITE),
+                fill: Color32::from_rgba_unmultiplied(128, 128, 128, 20),
+                stroke: Stroke::new(3.0, Color32::GRAY),
                 rounding: Rounding::none()
             }));
 

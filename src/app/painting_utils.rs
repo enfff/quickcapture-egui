@@ -1,14 +1,13 @@
 // Inspired from
 // https://github.com/emilk/egui/blob/master/crates/egui_demo_lib/src/demo/painting.rs
 
-use crate::app;
 use egui::emath;
 use egui::widgets::DragValue;
 use egui::{Pos2, Rect, Vec2};
 use image::{imageops, RgbaImage};
 use std::{ops::Add, vec};
 
-use super::crop_lib;
+use super::crop_utils;
 
 #[derive(Clone)]
 
@@ -54,7 +53,7 @@ pub struct Painting {
     ui_position: egui::Pos2,
     selected_shape: DrawingShape,
     to_screen: egui::emath::RectTransform,
-    crop: Option<crop_lib::Crop>,
+    crop: Option<crop_utils::Crop>,
     active_shape: bool,
     original_size: (u32, u32),
 }
@@ -171,7 +170,7 @@ impl Painting {
                     }
                     if ui.button("✂").clicked() {
                         self.active_shape = false;
-                        self.crop = Some(crop_lib::Crop::new());
+                        self.crop = Some(crop_utils::Crop::new());
                     }
                 });
 
@@ -532,7 +531,7 @@ impl Painting {
         return painting_size;
     }
 
-    pub fn shapes_remap(&mut self, crop: &crop_lib::Crop) { 
+    pub fn shapes_remap(&mut self, crop: &crop_utils::Crop) { 
         // Remaps the shapes coordinates to the new image size
         for shape in &mut self.shapes {
             let points: Vec<Pos2> = shape.points.iter_mut().map(|p| {
