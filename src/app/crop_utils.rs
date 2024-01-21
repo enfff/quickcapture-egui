@@ -46,10 +46,18 @@ impl Crop {
     }
 
     pub fn crop_img(&mut self, ui: &mut Ui, response: Response, dim: Vec2){
+
+        // self.offset_x_right = 0.0;
+        // self.offset_x_left = 0.0;
+        // self.offset_y_up = 0.0;
+        // self.offset_y_down = 0.0;
+        // self.limit_reached = false;
+
         self.cut_rect.min.x = response.rect.min.x + (response.rect.width() * self.offset_x_left) as f32;
         self.cut_rect.min.y = response.rect.min.y + (response.rect.height() * self.offset_y_up) as f32;
         self.cut_rect.max.x = response.rect.max.x - (response.rect.width() * self.offset_x_right) as f32;
         self.cut_rect.max.y = response.rect.max.y - (response.rect.height() * self.offset_y_down) as f32;
+
 
         if self.cut_rect.is_positive() {
             ui.painter().add(Shape::Rect(RectShape {
@@ -77,10 +85,10 @@ impl Crop {
             let point1thirdhw = Pos2::new(xr + self.cut_rect.size().x, yr + ythird);
             let point2thirdhw = Pos2::new(xr + self.cut_rect.size().x, yr + ythird * 2.0);
 
-            let line1 = Shape::dashed_line(&[point1thirdw, point1thirdwh], Stroke::new(1.0, Color32::WHITE), 2.5, 5.);
-            let line2 = Shape::dashed_line(&[point2thirdw, point2thirdwh], Stroke::new(1.0, Color32::WHITE), 2.5, 5.);
-            let line3 = Shape::dashed_line(&[point1thirdh, point1thirdhw], Stroke::new(1.0, Color32::WHITE), 2.5, 5.);
-            let line4 = Shape::dashed_line(&[point2thirdh, point2thirdhw], Stroke::new(1.0, Color32::WHITE), 2.5, 5.);
+            let line1 = Shape::dashed_line(&[point1thirdw, point1thirdwh], Stroke::new(1.0, Color32::DARK_GRAY), 2.5, 5.);
+            let line2 = Shape::dashed_line(&[point2thirdw, point2thirdwh], Stroke::new(1.0, Color32::DARK_GRAY), 2.5, 5.);
+            let line3 = Shape::dashed_line(&[point1thirdh, point1thirdhw], Stroke::new(1.0, Color32::DARK_GRAY), 2.5, 5.);
+            let line4 = Shape::dashed_line(&[point2thirdh, point2thirdhw], Stroke::new(1.0, Color32::DARK_GRAY), 2.5, 5.);
 
             ui.painter().add(line1);
             ui.painter().add(line2);
@@ -226,6 +234,7 @@ impl Crop {
             self.side = Side::None;
         }
     }
+
     pub fn get_cut_rect(&mut self, originalsize: Vec2) -> Rect {
         let initialpoint = Pos2::new(originalsize.x * self.offset_x_left, originalsize.y * self.offset_y_up);
 

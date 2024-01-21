@@ -12,7 +12,6 @@ A multi platform screenshot utility written in Rust
 - [x] Salvataggio immagine (png)
 - [x] Salvataggio immagine (jpeg)
 - [x] Salvataggio immagine (gif)
-- [ ] Sistemare UNDO/REDO
 - [x] Salvataggio nella clipboard
 - [x] Crop in post
 - [x] Hotkeys
