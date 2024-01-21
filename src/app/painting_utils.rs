@@ -355,6 +355,9 @@ impl Painting {
                             println!("Hover pos: {:?}", pointer_pos);
 
                             if current_line.points.last() != Some(&next_canvas_pos) {
+                                if current_line.stroke != self.stroke {
+                                    current_line.stroke = self.stroke;
+                                }
                                 next_canvas_pos = from_screen * pointer_pos;
                                 current_line.points.push(next_canvas_pos);
                                 response.mark_changed();
