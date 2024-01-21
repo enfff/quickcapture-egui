@@ -12,15 +12,13 @@ use super::crop_utils;
 #[derive(Clone)]
 
 pub struct DrawObj {
-    shape: DrawingShape,
     points: Vec<Pos2>,
     stroke: egui::Stroke,
 }
 
 impl DrawObj {
-    fn new(shape: DrawingShape, points: Vec<Pos2>, stroke: egui::Stroke) -> Self {
+    fn new(points: Vec<Pos2>, stroke: egui::Stroke) -> Self {
         Self {
-            shape: shape,
             points: points,
             stroke: stroke,
         }
@@ -30,7 +28,6 @@ impl DrawObj {
 impl Default for DrawObj {
     fn default() -> Self {
         Self {
-            shape: DrawingShape::Line,
             points: vec![],
             stroke: egui::Stroke::new(
                 1.0,
@@ -184,7 +181,7 @@ impl Painting {
                 ui.separator();
 
                 if self.shapes.is_empty() {
-                    self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke.clone()));
+                    self.shapes.push(DrawObj::new(vec![], self.stroke.clone()));
                 }
 
                 // UNDO BUTTON
@@ -202,11 +199,12 @@ impl Painting {
                         // Quick and dirty :clown:
                         self.shapes.pop();
                         self.last_actions.pop();
+                        
 
                         self.last_actions.push(self.shapes.pop().unwrap());
 
-                        self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
-                        self.last_actions.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
+                        self.shapes.push(DrawObj::new( vec![], self.stroke));
+                        self.last_actions.push(DrawObj::new( vec![], self.stroke));
 
                         // println!("(after) shapes: {:?}", self.shapes);
                         // println!( "(after) Last actions: {:?}", self.last_actions);
@@ -233,8 +231,8 @@ impl Painting {
 
                         self.shapes.push(self.last_actions.pop().unwrap());
 
-                        self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
-                        self.last_actions.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
+                        self.shapes.push(DrawObj::new( vec![], self.stroke));
+                        self.last_actions.push(DrawObj::new( vec![], self.stroke));
                     }
                 }
 
@@ -276,7 +274,6 @@ impl Painting {
         .response
     }
 
-    #[allow(unused_assignments)]
     pub fn ui_content(&mut self, ui: &mut egui::Ui) -> egui::Response {
         // Ritorna una egui::Response, cioè l'esito dell'aggiunta di un widget nella ui. Per farlo,
         // prima crea una UI che mostra lo screenshot come sfondo di un oggetto painter, cioè un
@@ -287,7 +284,7 @@ impl Painting {
         // e salvarlo
 
         if self.shapes.is_empty() {
-            self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
+            self.shapes.push(DrawObj::new( vec![], self.stroke));
         }
 
         let painting_size = self.painting_size(ui.available_size());
@@ -317,7 +314,7 @@ impl Painting {
         let from_screen = self.to_screen.inverse();
 
         if self.shapes.is_empty() {
-            self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
+            self.shapes.push(DrawObj::new( vec![], self.stroke));
         }
         if self.active_shape == true {
             match self.selected_shape {
@@ -328,17 +325,20 @@ impl Painting {
 
                         // println!("Canvas pos: {:?}", canvas_pos);
                         if current_line.points.last() != Some(&canvas_pos) {
+                            if current_line.stroke != self.stroke {
+                                current_line.stroke = self.stroke;
+                            }
                             current_line.points.push(canvas_pos);
                             response.mark_changed();
                         }
                     } else if !current_line.points.is_empty() {
-                        self.shapes.push(DrawObj::new(self.selected_shape.clone(), vec![], self.stroke));
+                        self.shapes.push(DrawObj::new( vec![], self.stroke));
                         response.mark_changed();
                     }
                 }
                 DrawingShape::StraightLine => {
                     let current_line = self.shapes.last_mut().unwrap();
-                    let mut init_canvas_pos = egui::Pos2::new(-1., -1.);
+                    let init_canvas_pos: Pos2;
                     let mut next_canvas_pos = egui::Pos2::new(-1., -1.); // This is the rectange bottom right point as we're dragging it
 
                     if response.clicked() {
@@ -355,6 +355,9 @@ impl Painting {
                             println!("Hover pos: {:?}", pointer_pos);
 
                             if current_line.points.last() != Some(&next_canvas_pos) {
+                                if current_line.stroke != self.stroke {
+                                    current_line.stroke = self.stroke;
+                                }
                                 next_canvas_pos = from_screen * pointer_pos;
                                 current_line.points.push(next_canvas_pos);
                                 response.mark_changed();
@@ -367,6 +370,9 @@ impl Painting {
                             // L'utente ha rilasciato il mouse -> disegna la linea
                             if let Some(pointer_pos) = response.interact_pointer_pos() {
                                 if current_line.points.last() != Some(&next_canvas_pos) {
+                                    if current_line.stroke != self.stroke {
+                                        current_line.stroke = self.stroke;
+                                    }
                                     next_canvas_pos = from_screen * pointer_pos;
                                     current_line.points.push(next_canvas_pos);
                                     response.mark_changed();
@@ -384,7 +390,7 @@ impl Painting {
             .filter(|line| line.points.len() >= 2)
             .map(|line| {
                 let points: Vec<egui::Pos2> = line.points.iter().map(|p| self.to_screen * *p).collect();
-                egui::Shape::line(points, self.stroke)
+                egui::Shape::line(points, line.stroke)
             });
         painter.extend(shapes);
 
@@ -409,7 +415,7 @@ impl Painting {
         // Ho dovuto clonare perché altrimenti dava problemi il borrow checker
         for line in self.shapes.clone().iter() {
             for couple_points in line.points.windows(2) {
-                for offset in 0..=self.stroke.width as u8 {
+                for offset in 0..= line.stroke.width as u8 {
                     // Domanda: Perché è stato fatto così?
                     // Risposta: Egui può disegnare le linee con un certo spessore perché per ogni coppia di punti disegna un rettangolo con uno spessore.
                     // Ho cercato di fare lo stesso con imageproc, ma non si può fare perché la linea non ha un argomento per lo spessore. Ho cercato di farlo
@@ -423,7 +429,7 @@ impl Painting {
                         output_image.as_mut().unwrap(),
                         start,
                         end,
-                        image::Rgba(self.stroke.color.to_array()),
+                        image::Rgba(line.stroke.color.to_array()),
                     );
                     // let rect = imageproc::rect::RectPosition::
 
@@ -433,7 +439,7 @@ impl Painting {
                         output_image.as_mut().unwrap(),
                         start,
                         end,
-                        image::Rgba(self.stroke.color.to_array()),
+                        image::Rgba(line.stroke.color.to_array()),
                     );
 
                     start = self.segment_coordinates(&couple_points[0], (offset, 0));
@@ -442,7 +448,7 @@ impl Painting {
                         output_image.as_mut().unwrap(),
                         start,
                         end,
-                        image::Rgba(self.stroke.color.to_array()),
+                        image::Rgba(line.stroke.color.to_array()),
                     );
                     // imageproc::drawing::draw_filled_rect_mut(output_image.as_mut().unwrap(), start, end);
                 }
