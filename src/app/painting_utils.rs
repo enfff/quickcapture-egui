@@ -276,6 +276,7 @@ impl Painting {
         .response
     }
 
+    #[allow(unused_assignments)]
     pub fn ui_content(&mut self, ui: &mut egui::Ui) -> egui::Response {
         // Ritorna una egui::Response, cioè l'esito dell'aggiunta di un widget nella ui. Per farlo,
         // prima crea una UI che mostra lo screenshot come sfondo di un oggetto painter, cioè un
