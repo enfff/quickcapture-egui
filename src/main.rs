@@ -45,9 +45,6 @@ impl eframe::App for QuickCaptureApp {
             Views::Save => {
                 self.save_view(ctx, _frame);
             },
-            Views::Crop => {
-                self.crop_view(ctx, _frame);
-            },
         }
 
     }

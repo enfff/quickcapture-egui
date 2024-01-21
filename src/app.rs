@@ -6,13 +6,13 @@ use arboard::Clipboard;
 use std::sync::mpsc;
 use std::{thread, time};
 
+mod crop_lib;
 mod image_utils;
 mod painting_utils;
 mod pathlib;
 mod save_utils;
 mod screenshot_utils;
 mod screenshot_view;
-mod crop_lib;
 mod hotkeys_utils;
 
 use crate::app::save_utils::SavePath;
@@ -24,7 +24,6 @@ pub enum Views {
     Settings,
     Screenshot,
     Save,
-    Crop
 }
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ScreenshotType {
@@ -46,7 +45,6 @@ pub struct QuickCaptureApp {
     painting: Option<painting_utils::Painting>, // UI and methods to draw on the screenshot
     painted_screenshot: Option<egui::TextureHandle>, // egui wants TextureHandles for painting on things. However, this cannot be used to save the image.
     timer_delay: u64,
-    crop_rectangle: Option<egui::Rect>,
     pub save_path: SavePath,
     screenshot_view: screenshot_view::ScreenshotView,
     update_counter: u8,     // Serve per chiamare _frame.set_visible(). Una volta chiamato, la finestra diventa trasparente all'update successivo. Per questo motivo bisogna contare a quale update siamo arrivati.
@@ -66,7 +64,6 @@ impl Default for QuickCaptureApp {
             screenshot_type: None,
             screenshot_image_buffer: None, // https://teamcolorcodes.com/napoli-color-codes/
             painting: None,
-            crop_rectangle: None,
             painted_screenshot: None,
             save_path: SavePath::new(
                 std::env::current_dir().unwrap().join("target"),
@@ -116,7 +113,7 @@ impl QuickCaptureApp {
                         self.view = Views::Screenshot;
                     }
 
-                    if self.screenshot_image_buffer.is_some(){
+                    if self.screenshot_image_buffer.is_some() {
                         // Se è stato fatto uno screenshot, mostra i bottoni per aggiungere modifiche e salvarlo
 
                         ui.separator();
@@ -189,7 +186,7 @@ impl QuickCaptureApp {
                                     Default::default(),
                                 ));
 
-                                // Create an istance of a Painter object
+                                // Create an instance of a Painter object
                                 self.painting = Some(painting_utils::Painting::new(
                                     self.painted_screenshot.clone(),
                                     self.screenshot_image_buffer.clone(),
@@ -202,8 +199,32 @@ impl QuickCaptureApp {
                             painting.ui_control(ui);
                             // Aggiunge un livello che ha come sfondo lo screenshot su cui sopra è possibile disegnare
                             painting.ui_content(ui);
-
-                            self.painting = Some(painting.clone());
+                            if self.screenshot_image_buffer.clone().unwrap().dimensions()
+                                != painting
+                                    .screenshot_image_buffer
+                                    .clone()
+                                    .unwrap()
+                                    .dimensions()
+                            {
+                                // Se le dimensioni dello screenshot sono cambiate, aggiorna il buffer
+                                self.screenshot_image_buffer =
+                                   painting.screenshot_image_buffer.clone();
+                                    self.painted_screenshot = Some(ui.ctx().load_texture(
+                                        "painted_screenshot",
+                                        image_utils::load_image_from_memory(
+                                            self.screenshot_image_buffer.clone().unwrap(),
+                                        ),
+                                        Default::default(),
+                                    ));
+                                    self.painting = Some(painting_utils::Painting::new_crop(
+                                        self.painted_screenshot.clone(),
+                                        self.screenshot_image_buffer.clone(),
+                                        painting.shapes.clone()
+                                    ));
+                                    ctx.request_repaint();
+                            }else{
+                                self.painting = Some(painting.clone());
+                            }
                         };
                     });
                 }
@@ -391,9 +412,8 @@ impl QuickCaptureApp {
         }
 
         // Questa parte è stata anticipata altrimenti si vedrebbe la maschera disegnata nelle righe successive
-        self.screenshot_view.ui(ctx, _frame, &mut self.view, &mut self.screenshot_type);
-
-
+        self.screenshot_view
+            .ui(ctx, _frame, &mut self.view, &mut self.screenshot_type);
         if self.screenshot_type.is_some() {
             // println!("Update counter {}", self.update_counter);
             // It's not the screenshot, but the data describing it. It needs to be converted to an image.
@@ -446,7 +466,13 @@ impl QuickCaptureApp {
         // Se l'utente non ha scelto che tipo di screenshot fare (tra FullScreen e PartialScreen)
         // Questa funzione viene chiamata ad ogni update() che può avvenire più volte in un secondo.
         // Siccome noi vogliamo che lo per chiamata di "screenshot_view", si fa un controllo con un contatore
-}
+
+        if self.screenshot_type.is_none() {
+            _frame.set_visible(true);
+
+            // Maschera sopra lo schermo per scegliere il tipo di screenshot
+        }
+    }
 
     pub fn save_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -467,11 +493,4 @@ impl QuickCaptureApp {
             };
         });
     }
-
-    pub fn crop_view(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
-        egui::CentralPanel::default().show(ctx, |ui| {
-            println!("Crop");
-        });
-    }
 }
-
