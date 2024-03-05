@@ -1,20 +1,16 @@
 # QuickCapture
-A multi platform screenshot utility written in Rust
+A multi platform screenshot utility written in Rust. 
+Optional project for Programmazione di sistema [02GRSOV] course at Politecnico di Torino (Italy). Final evaluation: 6 out of 6.
 
 ## Features
-- [x] Screenshot intero
-- [x] Screenshot parziale
-- [x] Screenshot multischermo intero
-- [x] Screenshot multischermo parziale
-- [x] Delay timer
-- [x] UI responsive
-- [x] Disegnare su screenshot
-- [x] Salvataggio immagine (png)
-- [x] Salvataggio immagine (jpeg)
-- [x] Salvataggio immagine (gif)
-- [x] Salvataggio nella clipboard
-- [x] Crop in post
-- [x] Hotkeys
+- Multiscreen capture (partial or full-screen)
+- Delay timer: delays the capture for the desired time in milliseconds
+- Easily accessible User Interface - egui 0.22.0 (egui-extras, egui-toast, egui-modal)
+- Take notes on screenshot
+- Crop: it is possible to crop the capture afterwards
+- Multi-format save to drive (PNG, JPEG, GIF)
+- Clipboard: it is possible to copy and paste the screenshot in another application
+- Hotkeys support (not global)
 
 ## Docs
 [Egui Docs](https://docs.rs/egui/latest/egui/)
