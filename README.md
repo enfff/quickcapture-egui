@@ -6,7 +6,7 @@ Optional project for [Programmazione di sistema [02GRSOV]](https://didattica.pol
 
 The program has been ran and tested in
 - Arch Linux, Gnome 45.4, Wayland, kernel 6.7.8-arch1-1
-- macOS Sonoma 13
+- macOS Sonoma 14.3.1
 - Windows 11 (on ARM e x64)
 
 ## Features
